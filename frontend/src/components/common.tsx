@@ -38,14 +38,14 @@ export function useAction() {
 }
 
 /** 表单弹窗：提交时校验并调用 onSubmit，返回 true 时关闭 */
-export function FormModal<V extends object>({
+export function FormModal<V extends object = Record<string, any>>({
   open, title, onCancel, onSubmit, initialValues, width = 640, children, form: externalForm, okText,
 }: {
   open: boolean
   title: ReactNode
   onCancel: () => void
   onSubmit: (values: V) => Promise<unknown>
-  initialValues?: Partial<V>
+  initialValues?: Record<string, any>
   width?: number
   children: ReactNode
   form?: FormInstance<V>
@@ -77,7 +77,7 @@ export function FormModal<V extends object>({
       confirmLoading={loading}
       destroyOnHidden
       okText={okText ?? '保存'}
-      maskClosable={false}
+      mask={{ closable: false }}
     >
       <Form form={form} layout="vertical" initialValues={initialValues as V} preserve={false} style={{ marginTop: 12 }}>
         {children}

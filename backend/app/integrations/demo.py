@@ -32,6 +32,18 @@ CATALOG = [
 NAMES = ["James Smith", "Mary Johnson", "Robert Brown", "Linda Davis", "Michael Wilson", "Sarah Miller", "David Moore"]
 STATES = [("CA", "Los Angeles", "90001"), ("NY", "New York", "10001"), ("TX", "Houston", "77001"), ("WA", "Seattle", "98101")]
 MAX_DAYS = 60
+COLORS = ["1677ff", "13c2c2", "52c41a", "fa8c16", "722ed1", "eb2f96", "2f54eb", "faad14"]
+
+
+def placeholder_image(code: str) -> str:
+    """生成内联 SVG 占位图（离线可用，无需外部图床）。"""
+    color = COLORS[sum(map(ord, code)) % len(COLORS)]
+    label = code.split("-")[0][:6]
+    return (
+        "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='120' height='120'>"
+        f"<rect width='120' height='120' rx='14' fill='%23{color}'/>"
+        f"<text x='60' y='68' font-size='20' font-family='Arial' font-weight='bold' text-anchor='middle' fill='white'>{label}</text></svg>"
+    )
 
 
 class DemoConnector(PlatformConnector):
@@ -59,7 +71,7 @@ class DemoConnector(PlatformConnector):
                 asin=f"B0DEMO{self.shop.id:02d}{idx:02d}",
                 fnsku=f"X00DEMO{self.shop.id:02d}{idx:02d}" if ful == "FBA" else None,
                 title=title,
-                image_url=f"https://picsum.photos/seed/{code}/120/120",
+                image_url=placeholder_image(code),
                 price=Decimal(price),
                 currency=self._currency(),
                 status="active",

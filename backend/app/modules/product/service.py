@@ -217,10 +217,12 @@ def pair_listing(ctx: Ctx, listing: Listing, product_id: int | None, pair_quanti
 
     ctx.require_shop(listing.shop_id)
     sku = None
+    product = None
     if product_id:
         product = get_or_404(ctx.db, Product, product_id, "产品")
         sku = product.sku
     listing.product_id = product_id
+    listing.product = product  # 同步关系属性，避免同一会话内读取到旧值
     listing.pair_quantity = pair_quantity
     if apply_to_history:
         ctx.db.execute(

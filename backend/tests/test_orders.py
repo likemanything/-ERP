@@ -157,3 +157,30 @@ def test_platform_shipped_unpaired_fbm_order_settles_after_pairing(api, factory)
     assert o["items"][0]["cost_settled"] is True and o["items"][0]["cost_purchase"] == 16
     assert not o["tags"]
     assert factory.inventory(wh["id"], p["id"])["qty_on_hand"] == 8
+
+
+def test_sku_snapshot_after_pairing_in_same_session(api, factory):
+    """回归：同一会话内先配对再写订单，订单行 SKU 快照不能为空。"""
+    from app.core.db import SessionLocal
+    from app.core.deps import system_ctx
+    from app.integrations.dto import OrderDTO, OrderItemDTO
+    from app.modules.order.service import upsert_order
+    from app.modules.product.models import Listing
+    from app.modules.product.service import pair_listing
+    from app.modules.shop.models import Shop
+
+    shop = factory.shop(name="会话店")
+    p = factory.product(sku="SNAP-SKU")
+    lst = factory.listing(shop["id"], None, msku="SNAP-M", fulfillment="FBM")
+    with SessionLocal() as db:
+        tenant_id = db.execute(__import__("sqlalchemy").text("select tenant_id from shops where id=:i"), {"i": shop["id"]}).scalar()
+        ctx = system_ctx(db, tenant_id)
+        listing = db.get(Listing, lst["id"])
+        assert listing.product is None  # 关系已加载为 None
+        pair_listing(ctx, listing, p["id"])
+        db.commit()
+        order, _ = upsert_order(ctx, db.get(Shop, shop["id"]), OrderDTO(
+            platform_order_id="SNAP-1", purchase_at="2026-09-01T00:00:00Z",
+            items=[OrderItemDTO(msku="SNAP-M", quantity=1, item_amount=10)]))
+        db.commit()
+        assert order.items[0].product_id == p["id"] and order.items[0].sku == "SNAP-SKU"

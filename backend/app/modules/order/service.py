@@ -63,8 +63,10 @@ def _pair_item(db, shop_id: int, item: SalesOrderItem, cache: dict) -> None:
         item.asin = item.asin or listing.asin
         item.title = item.title or listing.title
         if listing.product_id:
+            # 不依赖 listing.product 关系（长会话中配对变更后关系可能未刷新），直接按 ID 取产品
+            product = db.get(Product, listing.product_id)
             item.product_id = listing.product_id
-            item.sku = listing.product.sku if listing.product else None
+            item.sku = product.sku if product else None
 
 
 def _apply_item_fees(db, item: SalesOrderItem, dto_item, rate: Decimal) -> None:

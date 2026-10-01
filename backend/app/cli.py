@@ -43,7 +43,7 @@ def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
     """生成演示企业：主数据 + 采购入库 + 头程发货 + 平台订单/财务/广告同步。"""
     from app.core.deps import system_ctx
     from app.core.security import encrypt_json
-    from app.integrations.demo import CATALOG
+    from app.integrations.demo import CATALOG, placeholder_image
     from app.modules.fba import service as fba
     from app.modules.finance.service import create_expense
     from app.modules.integration.service import sync_shop
@@ -105,7 +105,7 @@ def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
                         purchase_cost=Decimal(costs[code]), default_supplier_id=sup.id, purchase_lead_days=12, moq=50,
                         weight_kg=Decimal(str(w)), length_cm=Decimal(length), width_cm=Decimal(width), height_cm=Decimal(height),
                         units_per_carton=40, declare_name_en=title[:40], declare_value_usd=Decimal("5"),
-                        image_url=f"https://picsum.photos/seed/{code}/120/120")
+                        image_url=placeholder_image(code))
             db.add(p)
             db.flush()
             db.add(ProductSupplier(product_id=p.id, supplier_id=sup.id, price=Decimal(costs[code]), moq=50, lead_days=12, is_default=True))

@@ -52,7 +52,7 @@ export default function Dashboard() {
 
   const trendOption = useMemo<EChartsOption>(() => ({
     tooltip: { trigger: 'axis' },
-    legend: { data: ['销售额', '订单数'] },
+    legend: { top: 0, data: ['销售额', '订单数'] },
     grid: { left: 60, right: 50, top: 40, bottom: 30 },
     xAxis: { type: 'category', data: (data?.trend ?? []).map((t) => t.date.slice(5)) },
     yAxis: [
