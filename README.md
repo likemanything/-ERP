@@ -12,7 +12,7 @@
 
 | 模块 | 能力 |
 | --- | --- |
-| 店铺授权 | Amazon（SP-API）、Shopify 原生对接；Walmart/eBay/TikTok/Temu/SHEIN/速卖通/线下渠道支持 Excel 导入；**演示模式**无需真实授权即可体验全流程；定时自动同步 + 手动同步 + 同步记录 |
+| 店铺授权 | Amazon（SP-API + 广告 API）、Walmart、TikTok Shop、Shopify 原生对接；eBay/Temu/SHEIN/速卖通/线下渠道支持 Excel 导入；**演示模式**无需真实授权即可体验全流程；定时自动同步 + 手动同步 + 同步记录 |
 | 产品 | 本地 SKU、SPU/变体属性、组合产品（套装自动拆分子件出入库）、辅料、箱规、报关信息、多供应商报价、Excel 导入导出 |
 | Listing | MSKU ↔ SKU 配对（支持 1 MSKU = N 件多件装）、自动配对、Excel 批量配对、配对后回溯历史订单并重算成本 |
 | 订单 | 多平台统一订单、FBA/自发货、状态页签；自发货流程：审核（分配仓库+锁库存）→ 批量发货（回传运单号）→ 签收；挂起/反审核/取消；平台直发订单自动补扣库存；Excel 导入；每单预估利润 |
@@ -112,6 +112,9 @@ cd ../frontend && npm run typecheck && npm run build
 | --- | --- | --- |
 | Amazon | SP-API 应用的 `client_id`、`client_secret`，卖家授权的 `refresh_token`；选择站点 | 订单（Orders API）、Listing（GET_MERCHANT_LISTINGS_ALL_DATA 报告）、FBA 库存（FBA Inventory API）、结算明细（Finances API）；自发货订单发货后回传运单号 |
 | Shopify | 自定义应用的 Admin API `access_token`，店铺域名 `xxx.myshopify.com` | 订单、商品变体（Listing） |
+| Amazon 广告 | 在 Amazon 店铺授权中额外填写广告 `ads_refresh_token`（广告应用 client 可选，Profile 默认按站点自动匹配） | Sponsored Products 推广商品日报（Reporting v3），按日期 × 活动 × 广告组 × SKU 计入广告分析与利润 |
+| Walmart（美国站） | Seller Center 生成的 `client_id`、`client_secret` | 订单（含 WFS 订单，从 WFS 虚拟仓结转成本）、商品、WFS 库存；自发货订单回传运单号 |
+| TikTok Shop | Partner 应用 `app_key`、`app_secret`，卖家授权 `access_token` / `refresh_token`（过期自动刷新）；`shop_cipher` 可留空自动获取 | 订单、商品；填写默认物流商 ID 后可回传运单号 |
 | 其他平台 / 线下 | — | 订单、FBA 库存、结算、广告数据均支持 Excel 模板导入 |
 | 任意平台（演示） | 勾选「演示模式」 | 自动生成确定性的订单、Listing、FBA 库存、结算、广告数据 |
 
@@ -129,7 +132,7 @@ backend/   FastAPI + SQLAlchemy 2 + Alembic + Pydantic 2，PostgreSQL（开发�
   app/modules/<域>/   models / schemas / service / router
     system shop product supplier warehouse purchase logistics order fba replenishment
     finance ads report integration distribution fulfillment assembly approval
-  app/integrations/  平台连接器（amazon / shopify / demo）与标准 DTO
+  app/integrations/  平台连接器（amazon + amazon_ads / walmart / tiktok / shopify / demo）与标准 DTO
 frontend/src/portal/ 分销商门户（独立布局、中英双语）
   app/worker.py      定时同步 worker（PostgreSQL 下多实例安全）
   app/cli.py         init-db / create-tenant / seed-demo
@@ -150,7 +153,7 @@ frontend/src/portal/ 分销商门户（独立布局、中英双语）
 已覆盖领星中小卖家最常用的主链路（店铺授权、产品与配对、采购、仓库、FBA 发货与头程分摊、补货建议、订单、利润报表、广告分析、权限），
 并补充了分销商门户、仓储作业（波次 / 扫码发货 / 标签打印）、加工单、多级审批。
 
-下一步（详见 [任务看板](docs/ai/08-roadmap.md)）：Walmart / TikTok Shop / Amazon Advertising 原生连接器（开发中）、分销增强、物流商面单对接、
+下一步（详见 [任务看板](docs/ai/08-roadmap.md)）：分销增强、物流商面单对接、
 Amazon Send-to-Amazon、平台结算对账、移动端扫码作业等。
 
 ## 参与开发（人类与 AI）

@@ -19,13 +19,14 @@
 | R2-2 分销前端 | 中英双语分销商门户（目录、购物车报价、订单、资金、API）、后台分销管理 6 个页面 | `4ae212a` |
 | R2-3 仓储作业 | 拣货波次、扫码验货发货、运单号导入、FNSKU / SKU / 条码标签、箱唛、拣货单、装箱单 | `d8db993` |
 | R2-4 审批与加工 | 多级审批流（采购单 / 请款单 / 分销充值）、审批中心、加工单（组装 / 拆分） | `d2254f8` |
-| R2-5 协作文档 | `CLAUDE.md`、`AGENTS.md`、`docs/ai/*`、ADR、交接模板、PR 模板 | 本提交 |
+| R2-5 协作文档 | `CLAUDE.md`、`AGENTS.md`、`docs/ai/*`、ADR、交接模板、PR 模板 | `8de7082` |
+| R2-6 平台连接器 | Walmart（订单 / 商品 / WFS 库存 / 回传）、TikTok Shop（签名、token 自动刷新、订单 / 商品 / 回传）、Amazon 广告 API（SP 日报）；Walmart / TikTok 店铺自动建 WFS / FBT 平台仓 | T15 |
 
 ## 3. 任务看板
 
 | ID | 标题 | 优先级 | 状态 | 负责人 | 分支 | 更新 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| T15 | 平台连接器：Walmart / TikTok Shop / Amazon Ads | P1 | 进行中 | claude（会话 016P7Q） | `claude/wizardly-meitner-h2vsdz` | 2026-10-01 | 按[交接记录](../handoff/2026-10-01-platform-connectors.md)继续 |
+| T15 | 平台连接器：Walmart / TikTok Shop / Amazon Ads | P1 | 已完成 | claude（会话 016P7Q） | `claude/wizardly-meitner-h2vsdz` | 2026-10-01 | 后续见 T30；[交接记录](../handoff/2026-10-01-platform-connectors.md) |
 | T18 | 分销增强：子账号权限、专属价格、发货通知、月结对账 | P1 | 待认领 | | | | |
 | T19 | 物流商面单对接（取号 + 打印面单） | P1 | 待认领 | | | | 依赖 T19a 选型 |
 | T20 | Amazon Send-to-Amazon 货件创建与官方箱唛 | P2 | 待认领 | | | | |
@@ -38,16 +39,19 @@
 | T27 | 客服中心（买家消息 / Review / Feedback） | P3 | 待认领 | | | | |
 | T28 | Listing 价格与跟卖监控 | P3 | 待认领 | | | | |
 | T29 | Temu / SHEIN / eBay 连接器 | P3 | 待认领 | | | | 参考 T15 的实现方式 |
+| T30 | 连接器增强：真实账号联调、TikTok 物流商映射、Amazon SB/SD 广告 | P2 | 待认领 | | | | T15 遗留 |
 
 ## 4. 任务卡
 
 ### T15 平台连接器：Walmart / TikTok Shop / Amazon Advertising
 
+> **已完成**（2026-10-01）。遗留事项转入 T30。
+
 - **背景**：目前只有 Amazon SP-API、Shopify 原生对接；Walmart / TikTok 订单靠 Excel 导入，广告靠导入或演示数据。
 - **范围**：Walmart（订单、商品、WFS 库存、回传运单）、TikTok Shop（订单、商品、回传运单、token 自动刷新）、Amazon Ads（SP 推广商品日报）。
 - **验收**：mock 测试覆盖认证、分页、映射、回传、错误；`platform_capabilities` 正确；授权表单展示新凭证字段；WFS / FBT 订单成本从平台仓结转；README 更新。
 - **涉及**：`app/integrations/*`、`shop/router.py`、`tests/test_connectors.py`。
-- **现状**：代码已写未测试，详见交接记录。
+- **结果**：`tests/test_connectors.py` 9 个用例（含 WFS 订单端到端成本结转）；授权表单展示新凭证字段与同步能力。
 
 ### T18 分销增强
 
@@ -93,6 +97,12 @@
 
 - **范围**：订单 / 库存等核心列表 N+1 排查、索引审查、慢查询日志、结构化日志、错误上报（可选 Sentry）、10 万订单级别压测脚本。
 - **验收**：核心列表 P95 < 500ms（10 万订单数据量）；压测报告写入 `docs/`。
+
+### T30 连接器增强（T15 遗留）
+
+- **范围**：① 用 Walmart / TikTok / Amazon Ads 沙箱或测试店铺联调，修正与真实返回不一致的映射；② TikTok「物流渠道 ↔ 平台物流商 ID」映射（替代凭证里的单一默认值）；③ Amazon Sponsored Brands / Sponsored Display 报告；④ TikTok FBT 库存同步。
+- **验收**：联调记录写入交接 / ADR；映射可在页面配置；新增报告类型有 mock 测试。
+- **依赖**：需要负责人提供测试账号；② 需要确认按渠道还是按店铺配置。
 
 ### T26 ～ T29
 

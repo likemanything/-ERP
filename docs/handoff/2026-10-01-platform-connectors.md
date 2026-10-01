@@ -2,7 +2,7 @@
 
 - 日期：2026-10-01
 - 交接人：Claude Code 会话（分支 `claude/wizardly-meitner-h2vsdz`）
-- 状态：**已暂停**（负责人要求先完成 AI 入职与协同文档）
+- 状态：~~已暂停~~ → **已关闭**（同日恢复并完成，见文末「关闭记录」）
 - 任务卡：[08-roadmap · T15](../ai/08-roadmap.md#t15-平台连接器walmart--tiktok-shop--amazon-advertising)
 
 ## 1. 目标
@@ -49,3 +49,14 @@
 - TikTok 回传运单号需要平台的物流商 ID，目前只支持在凭证里配置一个默认值；如需按订单渠道映射，需要新增「渠道 ↔ TikTok 物流商」映射（待负责人决定）。
 - Amazon Ads 只拉取 Sponsored Products；Sponsored Brands / Display 是否需要，待负责人决定。
 - Walmart 结算（Recon 报告）未实现，财务利润中的 Walmart 费用仍为预估。
+
+## 关闭记录（2026-10-01）
+
+按「下一步」逐项完成：
+1. 全量测试重跑（含本改动）：SQLite / PostgreSQL 通过。
+2. 新增 `backend/tests/test_connectors.py`（9 个用例）：Walmart（认证、分页、映射、WFS、回传、错误）、TikTok（签名算法、请求签名校验、token 刷新写回、shop_cipher 自动获取、合并明细、回传、错误）、Amazon Ads（启用条件、profile 匹配、报告轮询与 gzip 下载、31 天切片、失败）、Walmart WFS 订单端到端同步。
+3. `ensure_fba_warehouse` 扩展为 Amazon FBA / Walmart WFS / TikTok FBT 平台虚拟仓。
+4. 浏览器检查店铺授权表单：Walmart / TikTok / Amazon（含广告字段）正常，新增「支持同步」说明。
+5. README、02-architecture、01-domain、06-recipes 已更新。
+
+第 5 节的风险与待决问题转入任务 T30（真实账号联调、TikTok 物流商映射、SB/SD 广告）与 T21（Walmart Recon 结算）。

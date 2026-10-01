@@ -101,7 +101,7 @@ class XxxConnector(PlatformConnector):
    - 需要刷新 token 的平台：刷新后更新 `self.credentials` 并写回 `self.shop.credentials_enc = encrypt_json(...)`（同步服务会提交）。
 2. `registry.py` 的 `CONNECTORS` 注册。
 3. 站点：`app/modules/shop/marketplaces.py` 确认有该平台站点；平台仓发货的平台需要 FBA 类虚拟仓时扩展 `shop/router.py::ensure_fba_warehouse`。
-4. 测试：`httpx.Client(transport=httpx.MockTransport(handler))` 注入，断言请求（头、签名、分页参数）与 DTO 映射；参考 `tests/test_integrations.py`。
+4. 测试：`httpx.Client(transport=httpx.MockTransport(handler))` 注入，断言请求（头、签名、分页参数）与 DTO 映射；参考 `tests/test_connectors.py`。端到端同步：`monkeypatch.setattr("app.modules.integration.service.get_connector", ...)` 后调用 `POST /shops/{id}/sync`（`background: false`），见 `test_walmart_wfs_order_sync_end_to_end`。
 5. 文档：README「对接平台」表、02-architecture §7、08-roadmap。
 
 ---

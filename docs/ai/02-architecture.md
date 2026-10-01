@@ -156,10 +156,15 @@ base.py      PlatformConnector：capabilities、credential_fields、request()（
              fetch_orders / fetch_listings / fetch_fba_inventory / fetch_transactions / fetch_ad_metrics / confirm_shipment
 dto.py       OrderDTO / OrderItemDTO / ListingDTO / FbaInventoryDTO / TransactionDTO / AdMetricDTO（平台无关）
 registry.py  CONNECTORS = {platform: Connector}；get_connector(shop)（mode=demo → DemoConnector）；platform_capabilities()
-amazon.py    SP-API（LWA，无需 SigV4）    shopify.py  Admin REST    demo.py  确定性演示数据
+amazon.py      SP-API（LWA，无需 SigV4）：订单 / Listing 报告 / FBA 库存 / 财务事件 / 回传运单
+amazon_ads.py  广告 API（挂在 AmazonConnector 上，配置 ads_refresh_token 才启用 ADS）：Reporting v3 异步报告
+walmart.py     Marketplace API（OAuth client_credentials）：订单（WFS→FBA）/ 商品 / WFS 库存 / 回传运单
+tiktok.py      Partner API 202309（HMAC-SHA256 签名、token 自动刷新并写回店铺凭证）：订单 / 商品 / 回传运单
+shopify.py     Admin REST    demo.py  确定性演示数据
 ```
 
-状态见 [08-roadmap](08-roadmap.md)：Walmart / TikTok Shop / Amazon Ads 连接器开发中（交接记录在 `docs/handoff/`）。
+平台仓发货的店铺（Amazon FBA / Walmart WFS / TikTok FBT）创建店铺时自动生成平台虚拟仓（`shop/router.py::ensure_fba_warehouse`），
+平台仓订单从该仓 FIFO 结转成本。连接器测试见 `tests/test_integrations.py`、`tests/test_connectors.py`（含 monkeypatch `get_connector` 的端到端同步示例）。
 
 ## 8. 前端架构
 

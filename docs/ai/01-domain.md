@@ -25,7 +25,7 @@
 
 | 域 | 用户在做什么 | 关键规则 |
 | --- | --- | --- |
-| 店铺 shop | 授权平台店铺、同步数据 | 凭证 Fernet 加密，接口不回显；演示模式（`credentials.mode=demo`）生成确定性假数据；**亚马逊**店铺自动建一个 FBA 虚拟仓（`shop/router.py::ensure_fba_warehouse`） |
+| 店铺 shop | 授权平台店铺、同步数据 | 凭证 Fernet 加密，接口不回显；演示模式（`credentials.mode=demo`）生成确定性假数据；Amazon / Walmart / TikTok 店铺自动建平台虚拟仓（FBA / WFS / FBT，`shop/router.py::ensure_fba_warehouse`） |
 | 产品 product | 本地 SKU、组合产品、辅料、Listing 配对 | 1 个 MSKU 可配对「N 件」本地 SKU（多件装 `pair_quantity`）；组合产品（bundle）是虚拟套装，出入库时展开为子件，**本身不持有库存** |
 | 采购 purchase | 计划 → 采购单 → 审批 → 下单 → 分批到货 → 结单；退货；请款付款 | 外币采购按下单汇率折算本位币；运费/杂费按金额分摊进入库成本（物流成本部分）；次品单独计数 |
 | 仓库 warehouse | 库存查询、出入库单、调拨、盘点、库位、批次库龄 | 库存 = 实物 `qty_on_hand`、锁定 `qty_locked`、可用 = 实物 − 锁定、次品、在途；本地仓默认不允许负库存，FBA 虚拟仓允许负数 |
