@@ -172,10 +172,18 @@ def _advance_status(ctx: Ctx, shop: Shop, order: SalesOrder, dto: OrderDTO) -> N
             order.tags = sorted(set(order.tags or []) | {"自动审核失败"})
             order.remark = (order.remark or "") + f" [自动审核失败:{exc.message}]"
     if st in ("shipped", "delivered") and order.status in (OrderStatus.TO_AUDIT, OrderStatus.PENDING, OrderStatus.TO_SHIP):
-        # 卖家在平台后台直接发货：系统补扣库存
-        if order.status != OrderStatus.TO_SHIP:
-            audit_order(ctx, order, None, None, force=True)
-        ship_order(ctx, order, {"carrier": dto.carrier, "tracking_no": dto.tracking_no}, shipped_at=dto.shipped_at)
+        # 卖家在平台后台直接发货：系统补扣库存；无法扣减（如未配对）时先标记发货，配对后再核算成本
+        try:
+            with db.begin_nested():
+                if order.status != OrderStatus.TO_SHIP:
+                    audit_order(ctx, order, None, None, force=True)
+                ship_order(ctx, order, {"carrier": dto.carrier, "tracking_no": dto.tracking_no}, shipped_at=dto.shipped_at)
+        except BizError:
+            order.status = OrderStatus.SHIPPED
+            order.shipped_at = dto.shipped_at or utcnow()
+            order.carrier = dto.carrier or order.carrier
+            order.tracking_no = dto.tracking_no or order.tracking_no
+            order.tags = sorted(set(order.tags or []) | {"平台发货-待核算成本"})
     if st == "delivered" and order.status == OrderStatus.SHIPPED:
         order.status = OrderStatus.DELIVERED
         order.delivered_at = utcnow()
@@ -326,21 +334,52 @@ def settle_fba_cost(ctx: Ctx, shop: Shop, order: SalesOrder) -> None:
         item.quantity_shipped = item.quantity
 
 
+def settle_fbm_cost(ctx: Ctx, order: SalesOrder) -> None:
+    """平台直接发货、未经系统出库的自发货订单：配对后从发货仓补扣库存并核算成本。"""
+    db = ctx.db
+    wid = order.warehouse_id or default_ship_warehouse(db)
+    order.warehouse_id = wid
+    inv = InventoryService(db)
+    ref = Ref("sales_order", order.id, order.order_no, f"补扣库存 {order.platform_order_id}", order.local_date)
+    for item in order.items:
+        if item.cost_settled or not item.product_id:
+            continue
+        pair_qty = 1
+        if item.listing_id:
+            listing = db.get(Listing, item.listing_id)
+            pair_qty = listing.pair_quantity if listing else 1
+        item.cost_purchase = Decimal(0)
+        item.cost_freight = Decimal(0)
+        for comp_id, qty in expand_bundle(db, item.product_id, item.quantity * pair_qty):
+            res = inv.outbound(wid, comp_id, qty, ref, change_type=LedgerType.SALE_OUT, allow_negative=True)
+            item.cost_purchase += q2(res.purchase_cost)
+            item.cost_freight += q2(res.freight_cost)
+        item.cost_settled = True
+        item.quantity_shipped = item.quantity
+    if all(i.cost_settled for i in order.items):
+        order.tags = sorted(set(order.tags or []) - {"平台发货-待核算成本"}) or None
+
+
 def resettle_unpaired(ctx: Ctx, shop_id: int | None = None) -> int:
-    """配对后对已发货但未核算成本的 FBA 订单重新核算。"""
+    """配对后对已发货但未核算成本的订单重新核算（FBA 从 FBA 仓结转，自发货从发货仓补扣）。"""
     db = ctx.db
     stmt = (
         select(SalesOrder)
         .join(SalesOrderItem, SalesOrderItem.order_id == SalesOrder.id)
-        .where(SalesOrder.fulfillment == "FBA", SalesOrder.status.in_([OrderStatus.SHIPPED, OrderStatus.DELIVERED]),
+        .where(SalesOrder.status.in_([OrderStatus.SHIPPED, OrderStatus.DELIVERED]),
                SalesOrderItem.cost_settled.is_(False), SalesOrderItem.product_id.is_not(None))
         .distinct()
     )
     if shop_id:
         stmt = stmt.where(SalesOrder.shop_id == shop_id)
+    if ctx.shop_ids is not None:
+        stmt = stmt.where(SalesOrder.shop_id.in_(ctx.shop_ids))
     n = 0
     for order in db.execute(stmt).scalars().all():
-        settle_fba_cost(ctx, db.get(Shop, order.shop_id), order)
+        if order.fulfillment == "FBA":
+            settle_fba_cost(ctx, db.get(Shop, order.shop_id), order)
+        else:
+            settle_fbm_cost(ctx, order)
         n += 1
     db.commit()
     return n

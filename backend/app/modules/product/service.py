@@ -252,3 +252,35 @@ def auto_pair(ctx: Ctx, shop_id: int | None = None) -> int:
             count += 1
     ctx.db.commit()
     return count
+
+
+def upsert_listings(ctx: Ctx, shop, rows) -> tuple[int, int]:
+    """平台 Listing 同步写入（按 店铺+MSKU）。新 Listing 若 MSKU 与本地 SKU 相同则自动配对。"""
+    db = ctx.db
+    existing = {x.msku: x for x in db.execute(select(Listing).where(Listing.shop_id == shop.id)).scalars().all()}
+    new_mskus = [r.msku for r in rows if r.msku not in existing]
+    products = {p.sku: p for p in db.execute(select(Product).where(Product.sku.in_(new_mskus))).scalars().all()} if new_mskus else {}
+    created = updated = 0
+    for r in rows:
+        lst = existing.get(r.msku)
+        if lst is None:
+            lst = Listing(shop_id=shop.id, msku=r.msku, currency=r.currency or shop.currency)
+            p = products.get(r.msku)
+            if p is not None:
+                lst.product_id = p.id
+            db.add(lst)
+            existing[r.msku] = lst
+            created += 1
+        else:
+            updated += 1
+        for f in ("asin", "parent_asin", "fnsku", "title", "image_url", "open_date"):
+            v = getattr(r, f)
+            if v is not None:
+                setattr(lst, f, v)
+        lst.price = r.price
+        lst.status = r.status
+        lst.fulfillment = r.fulfillment
+        if r.currency:
+            lst.currency = r.currency
+    db.flush()
+    return created, updated

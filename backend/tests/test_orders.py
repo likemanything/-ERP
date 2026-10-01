@@ -136,3 +136,24 @@ def test_auto_audit(api, factory):
     assert o["status"] == "to_ship" and o["warehouse_id"] == wh["id"]
     o2 = api.post("/orders", {"shop_id": shop["id"], "items": [{"msku": "MSKU-A", "quantity": 9, "unit_price": 10}]})
     assert o2["status"] == "to_audit" and "自动审核失败" in o2["tags"]
+
+
+def test_platform_shipped_unpaired_fbm_order_settles_after_pairing(api, factory):
+    wh = factory.default_warehouse()
+    shop = factory.shop(name="FBM店")
+    p = factory.product(sku="LATE", purchase_cost=8)
+    factory.stock_in(wh["id"], p["id"], 10, unit_cost=8)
+    headers = ["店铺", "订单号", "下单时间", "MSKU", "数量", "单价", "币种", "配送方式", "状态"]
+    rows = [["FBM店", "F-1", "2026-09-01 10:00:00", "NEW-MSKU", 2, 15, "USD", "FBM", "shipped"]]
+    res = api.post("/orders/import", files={"file": ("o.xlsx", _xlsx(headers, rows), "application/octet-stream")})
+    assert res["created"] == 1, res
+    o = api.get("/orders")["items"][0]
+    assert o["status"] == "shipped" and "平台发货-待核算成本" in o["tags"]
+    assert o["items"][0]["cost_settled"] is False
+    lst = factory.listing(shop["id"], p["id"], msku="NEW-MSKU", fulfillment="FBM")
+    assert lst["sku"] == "LATE"
+    api.post("/orders/resettle-cost")
+    o = api.get(f"/orders/{o['id']}")
+    assert o["items"][0]["cost_settled"] is True and o["items"][0]["cost_purchase"] == 16
+    assert not o["tags"]
+    assert factory.inventory(wh["id"], p["id"])["qty_on_hand"] == 8

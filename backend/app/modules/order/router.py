@@ -290,18 +290,31 @@ def revert_audit(body: CancelIn, ctx: Ctx = Depends(perm("order:audit"))):
     return service.batch(ctx, body.order_ids, lambda o: service.revert_audit(ctx, o), "反审核")
 
 
-@router.post("/orders/{order_id}/ship", response_model=OrderOut, summary="发货（扣减库存、核算成本）")
+def _push_tracking(ctx: Ctx, order_ids: list[int]) -> None:
+    from app.modules.integration.service import push_tracking
+
+    for oid in order_ids:
+        order = ctx.db.get(SalesOrder, oid)
+        if order is not None and order.fulfillment == "FBM":
+            push_tracking(ctx, order)
+    ctx.db.commit()
+
+
+@router.post("/orders/{order_id}/ship", response_model=OrderOut, summary="发货（扣减库存、核算成本，回传运单号）")
 def ship(order_id: int, body: ShipIn, ctx: Ctx = Depends(perm("order:ship"))):
     res = service.batch(ctx, [order_id], lambda o: service.ship_order(ctx, o, body.model_dump()), "发货")
     if res["failed"]:
         raise BizError(res["failed"][0]["message"])
+    _push_tracking(ctx, res["success"])
     return order_out_many(ctx, [get_or_404(ctx.db, SalesOrder, order_id, "订单")])[0]
 
 
 @router.post("/orders/ship", response_model=BatchResult, summary="批量发货（可逐单填写运单号）")
 def batch_ship(body: BatchShipIn, ctx: Ctx = Depends(perm("order:ship"))):
     data = {x.order_id: x.model_dump() for x in body.orders}
-    return service.batch(ctx, list(data), lambda o: service.ship_order(ctx, o, data[o.id]), "发货")
+    res = service.batch(ctx, list(data), lambda o: service.ship_order(ctx, o, data[o.id]), "发货")
+    _push_tracking(ctx, res["success"])
+    return res
 
 
 @router.post("/orders/cancel", response_model=BatchResult, summary="批量取消")
