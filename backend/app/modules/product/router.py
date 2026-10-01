@@ -70,7 +70,7 @@ router.include_router(
 
 # ------------------------------------------------------------------ 产品
 PRODUCT_COLUMNS = [
-    ("sku", "SKU"), ("name", "品名"), ("name_en", "英文名"), ("spu", "SPU"), ("category_name", "分类"),
+    ("sku", "SKU"), ("name", "品名"), ("name_en", "英文名"), ("barcode", "商品条码"), ("spu", "SPU"), ("category_name", "分类"),
     ("brand_name", "品牌"), ("product_type", "类型"), ("status", "状态"), ("unit", "单位"),
     ("purchase_cost", "采购成本"), ("purchase_lead_days", "采购交期"), ("moq", "起订量"),
     ("weight_kg", "单品重量kg"), ("length_cm", "长cm"), ("width_cm", "宽cm"), ("height_cm", "高cm"),
@@ -83,7 +83,7 @@ PRODUCT_COLUMNS = [
 
 def _product_query(keyword, category_id, brand_id, status, product_type, spu):
     stmt = select(Product).order_by(Product.id.desc())
-    stmt = keyword_filter(stmt, keyword, [Product.sku, Product.name, Product.name_en, Product.spu])
+    stmt = keyword_filter(stmt, keyword, [Product.sku, Product.name, Product.name_en, Product.spu, Product.barcode])
     if category_id:
         stmt = stmt.where(Product.category_id == category_id)
     if brand_id:

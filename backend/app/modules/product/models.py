@@ -48,6 +48,7 @@ class Product(TenantModel):
     sku: Mapped[str] = mapped_column(String(64))
     name: Mapped[str] = mapped_column(String(255))
     name_en: Mapped[str | None] = mapped_column(String(255))
+    barcode: Mapped[str | None] = mapped_column(String(64), index=True, doc="商品条码（UPC/EAN 等），用于扫码验货")
     spu: Mapped[str | None] = mapped_column(String(64), index=True, doc="款号，多属性产品共用")
     attributes: Mapped[dict | None] = mapped_column(JSON, doc="变体属性，如 {颜色: 红, 尺码: L}")
     category_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("product_categories.id"))

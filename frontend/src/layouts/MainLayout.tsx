@@ -1,6 +1,6 @@
 import { Suspense, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { App, Avatar, Badge, Breadcrumb, Button, Dropdown, Form, Input, Layout, List, Menu, Popover, Spin, Tag, Typography } from 'antd'
+import { App, Avatar, Badge, Breadcrumb, Button, Dropdown, Empty, Form, Input, Layout, Menu, Popover, Spin, Tag, Typography } from 'antd'
 import { BellOutlined, LockOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Page } from '@/api/client'
@@ -32,23 +32,19 @@ function Notifications() {
   const items = data?.items ?? []
   const content = (
     <div style={{ width: 340 }}>
-      <List
-        size="small"
-        dataSource={items}
-        locale={{ emptyText: '暂无未读消息' }}
-        renderItem={(n) => (
-          <List.Item style={{ cursor: n.link ? 'pointer' : undefined }} onClick={() => n.link && navigate(n.link.split('?')[0])}>
-            <List.Item.Meta
-              title={<span style={{ fontSize: 13 }}>{n.title}</span>}
-              description={
-                <span style={{ fontSize: 12 }}>
-                  {n.content} · {fmtDateTime(n.created_at)}
-                </span>
-              }
-            />
-          </List.Item>
-        )}
-      />
+      {!items.length && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="暂无未读消息" />}
+      {items.map((n) => (
+        <div
+          key={n.id}
+          style={{ padding: '8px 4px', borderBottom: '1px solid #f0f0f0', cursor: n.link ? 'pointer' : undefined }}
+          onClick={() => n.link && navigate(n.link.split('?')[0])}
+        >
+          <div style={{ fontSize: 13 }}>{n.title}</div>
+          <div style={{ fontSize: 12, color: '#888' }}>
+            {n.content} · {fmtDateTime(n.created_at)}
+          </div>
+        </div>
+      ))}
       {items.length > 0 && (
         <Button
           type="link"

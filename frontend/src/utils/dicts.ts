@@ -246,3 +246,10 @@ export const STOCK_DISPLAY: Dict = {
   capped: ['显示上限', 'purple'],
   status: ['仅显示有货/缺货', 'default'],
 }
+
+export const WAVE_STATUS: Dict = {
+  picking: ['拣货中', 'blue'],
+  picked: ['待打包发货', 'purple'],
+  completed: ['已完成', 'green'],
+  cancelled: ['已取消', 'default'],
+}

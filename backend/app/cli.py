@@ -40,6 +40,12 @@ def create_tenant(company: str, username: str, password: str) -> None:
         print(f"已创建企业 {tenant.name}（{tenant.code}），管理员 {admin.username}")
 
 
+def _ean13(base12: str) -> str:
+    """12 位数字补校验位生成 EAN-13。"""
+    total = sum(int(d) * (3 if i % 2 else 1) for i, d in enumerate(base12))
+    return base12 + str((10 - total % 10) % 10)
+
+
 def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
     """生成演示企业：主数据 + 采购入库 + 头程发货 + 平台订单/财务/广告同步。"""
     from app.core.deps import system_ctx
@@ -106,7 +112,7 @@ def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
                         purchase_cost=Decimal(costs[code]), default_supplier_id=sup.id, purchase_lead_days=12, moq=50,
                         weight_kg=Decimal(str(w)), length_cm=Decimal(length), width_cm=Decimal(width), height_cm=Decimal(height),
                         units_per_carton=40, declare_name_en=title[:40], declare_value_usd=Decimal("5"),
-                        image_url=placeholder_image(code))
+                        image_url=placeholder_image(code), barcode=_ean13(f"690123456{len(products) + 1:03d}"))
             db.add(p)
             db.flush()
             db.add(ProductSupplier(product_id=p.id, supplier_id=sup.id, price=Decimal(costs[code]), moq=50, lead_days=12, is_default=True))
@@ -174,7 +180,17 @@ def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
                                  "currency": "CNY", "description": desc})
         db.commit()
 
-        # 分销：等级、分销商（含门户账号）、分销商品、充值与订单
+        # 默认仓库位（拣货单按库位排序）
+        from app.modules.warehouse.models import InventoryBalance
+
+        for i, code in enumerate(products):
+            bal = db.execute(select(InventoryBalance).where(InventoryBalance.warehouse_id == wh.id,
+                                                            InventoryBalance.product_id == products[code].id)).scalar_one_or_none()
+            if bal is not None:
+                bal.bin_code = f"A-{i // 4 + 1:02d}-{i % 4 + 1:02d}"
+        db.commit()
+
+                # 分销：等级、分销商（含门户账号）、分销商品、充值与订单
         from app.modules.distribution import service as dist
         from app.modules.distribution.models import DistributorLevel
         from app.modules.system.service import update_settings

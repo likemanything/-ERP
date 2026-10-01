@@ -4,6 +4,7 @@ from app.modules.ads import models as ads_models  # noqa: F401
 from app.modules.distribution import models as distribution_models  # noqa: F401
 from app.modules.fba import models as fba_models  # noqa: F401
 from app.modules.finance import models as finance_models  # noqa: F401
+from app.modules.fulfillment import models as fulfillment_models  # noqa: F401
 from app.modules.integration import models as integration_models  # noqa: F401
 from app.modules.logistics import models as logistics_models  # noqa: F401
 from app.modules.order import models as order_models  # noqa: F401

@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { App, Button, Col, DatePicker, Descriptions, Divider, Drawer, Form, Input, InputNumber, Modal, Row, Select, Space, Table, Tabs, Tag } from 'antd'
 import { PlusOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
-import { api, errorMessage } from '@/api/client'
+import { api, errorMessage, openPdf } from '@/api/client'
 import DataTable, { useReload } from '@/components/DataTable'
 import { FormModal, useAction } from '@/components/common'
 import LinesEditor, { type Line } from '@/components/LinesEditor'
 import Perm from '@/components/Perm'
+import PrintLabelsModal, { type LabelLine } from '@/components/PrintLabels'
 import ProductCell from '@/components/ProductCell'
 import StatusTag from '@/components/StatusTag'
 import { ChannelSelect, CurrencySelect, ShopSelect, WarehouseSelect } from '@/components/selects'
@@ -141,6 +142,8 @@ export default function Shipments() {
   const [receiving, setReceiving] = useState<R | null>(null)
   const [costing, setCosting] = useState<R | null>(null)
   const [editing, setEditing] = useState<R | null>(null)
+  const [labels, setLabels] = useState<LabelLine[] | null>(null)
+  const { message } = App.useApp()
   const reload = useReload('fba-shipments')
   const run = useAction()
   const act = (s: R, action: string, confirm?: string) => run(() => api.post(`/fba-shipments/${s.id}/${action}`), { confirm, onDone: reload })
@@ -167,6 +170,9 @@ export default function Shipments() {
           {
             title: '操作', key: 'op', fixed: 'right',
             render: (_, r) => (
+              <Space size={4} wrap>
+                <a onClick={() => setLabels((r.lines as R[]).map((l) => ({ key: l.id, listing_id: l.listing_id ?? undefined, code: l.fnsku ?? undefined, name: l.msku ?? l.sku, qty: l.qty_shipped })))}>FNSKU标签</a>
+                <a onClick={() => openPdf(`/print/fba-shipments/${r.id}/carton-labels.pdf`).catch((e) => message.error(errorMessage(e)))}>箱唛</a>
               <Perm code="fba:shipment:edit">
                 <Space size={4} wrap>
                   {r.status === 'draft' && <a onClick={() => setEditing(r)}>编辑</a>}
@@ -177,10 +183,12 @@ export default function Shipments() {
                   {r.status === 'draft' && <a style={{ color: '#cf1322' }} onClick={() => act(r, 'cancel', '取消货件？')}>取消</a>}
                 </Space>
               </Perm>
+              </Space>
             ),
           },
         ]}
       />
+      <PrintLabelsModal open={!!labels} lines={labels ?? []} kinds={['fnsku']} onClose={() => setLabels(null)} />
       <CreateShipment open={creating} onClose={() => setCreating(false)} onDone={reload} />
       <Detail s={detail} onClose={() => setDetail(null)} />
       <ReceiveModal s={receiving} onClose={() => setReceiving(null)} onDone={reload} />

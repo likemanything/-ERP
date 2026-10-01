@@ -302,6 +302,9 @@ def ship_order(ctx: Ctx, order: SalesOrder, data: dict, *, shipped_at: datetime 
         order.actual_freight = order.est_freight
     order.status = OrderStatus.SHIPPED
     order.shipped_at = shipped_at or utcnow()
+    from app.modules.fulfillment.service import after_ship
+
+    after_ship(db, order)
     return order
 
 

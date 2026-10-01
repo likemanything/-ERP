@@ -80,6 +80,7 @@ class SalesOrder(TenantModel):
     stock_plan: Mapped[list | None] = mapped_column(JSON, doc="审核时锁定的库存明细 [{item_id, product_id, qty}]")
     distributor_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("distributors.id"), index=True, doc="分销订单所属分销商")
     distribution_type: Mapped[str | None] = mapped_column(String(16), doc="dropship 一件代发 / wholesale 批发")
+    wave_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("pick_waves.id", ondelete="SET NULL"), index=True, doc="拣货波次")
     charge_detail: Mapped[dict | None] = mapped_column(JSON, doc="分销扣费明细 {goods, freight, handling, adjust, total, currency}")
 
     items: Mapped[list["SalesOrderItem"]] = relationship(

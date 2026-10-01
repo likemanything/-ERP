@@ -86,6 +86,8 @@ export const MENU: MenuGroup[] = [
       { path: '/stock-documents', label: '出入库单', perm: 'inventory:doc:view', element: p(() => import('@/pages/warehouse/StockDocuments')) },
       { path: '/inventory/ledger', label: '库存流水', perm: 'inventory:ledger:view', element: p(() => import('@/pages/warehouse/Ledger')) },
       { path: '/inventory/batches', label: '批次与库龄', perm: 'inventory:view', element: p(() => import('@/pages/warehouse/Batches')) },
+      { path: '/warehouse/waves', label: '拣货波次', perm: 'order:view', element: p(() => import('@/pages/warehouse/Waves')) },
+      { path: '/warehouse/scan-ship', label: '扫码验货发货', perm: 'order:ship', element: p(() => import('@/pages/warehouse/ScanShip')) },
       { path: '/warehouses', label: '仓库设置', perm: 'warehouse:view', element: p(() => import('@/pages/warehouse/Warehouses')) },
     ],
   },

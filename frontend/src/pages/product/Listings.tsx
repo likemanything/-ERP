@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Button, Checkbox, Col, Form, Input, InputNumber, Row, Select, Space, Tag } from 'antd'
-import { LinkOutlined, PlusOutlined, ThunderboltOutlined, UploadOutlined } from '@ant-design/icons'
+import { LinkOutlined, PlusOutlined, PrinterOutlined, ThunderboltOutlined, UploadOutlined } from '@ant-design/icons'
 import { api } from '@/api/client'
 import DataTable, { useReload } from '@/components/DataTable'
 import { FormModal, ImportModal, useAction } from '@/components/common'
 import Perm from '@/components/Perm'
+import PrintLabelsModal, { type LabelLine } from '@/components/PrintLabels'
 import ProductCell from '@/components/ProductCell'
 import StatusTag from '@/components/StatusTag'
 import { ProductSelect, ShopSelect, UserSelect } from '@/components/selects'
@@ -17,6 +18,7 @@ export default function Listings() {
   const [pairing, setPairing] = useState<Listing | null>(null)
   const [creating, setCreating] = useState(false)
   const [importOpen, setImportOpen] = useState(false)
+  const [labels, setLabels] = useState<LabelLine[] | null>(null)
   const reload = useReload('listings')
   const run = useAction()
 
@@ -33,7 +35,13 @@ export default function Listings() {
           { name: 'status', type: 'select', label: '状态', options: dictOptions(LISTING_STATUS) },
           { name: 'paired', type: 'select', label: '配对', options: [{ label: '已配对', value: true }, { label: '未配对', value: false }] },
         ]}
-        toolbar={() => (
+        rowSelection
+        toolbar={({ selectedRows }) => (
+          <Space>
+            <Button icon={<PrinterOutlined />} disabled={!selectedRows.length}
+              onClick={() => setLabels(selectedRows.map((r) => ({ key: r.id, listing_id: r.id, name: r.msku, code: r.fnsku, title: r.title, qty: 1 })))}>
+              打印标签
+            </Button>
           <Perm code="listing:edit">
             <Space>
               <Button type="primary" icon={<PlusOutlined />} onClick={() => setCreating(true)}>手工添加</Button>
@@ -44,6 +52,7 @@ export default function Listings() {
               <Button onClick={() => run(() => api.post('/orders/resettle-cost'), { success: (r: any) => r.message })}>重算订单成本</Button>
             </Space>
           </Perm>
+          </Space>
         )}
         columns={[
           {
@@ -118,6 +127,7 @@ export default function Listings() {
       </FormModal>
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} title="批量配对（店铺 + MSKU → SKU）"
         uploadUrl="/listings/import-pair" templateUrl="/listings/pair-template" onDone={reload} />
+      <PrintLabelsModal open={!!labels} lines={labels ?? []} onClose={() => setLabels(null)} />
     </>
   )
 }

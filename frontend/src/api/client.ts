@@ -99,9 +99,24 @@ export function cleanParams(params: Record<string, unknown>): Record<string, unk
   return out
 }
 
+/** 二进制请求失败时，把 Blob 形式的错误响应解析为可读信息 */
+async function blobError(err: unknown): Promise<unknown> {
+  if (axios.isAxiosError(err) && err.response?.data instanceof Blob) {
+    try {
+      const body = JSON.parse(await err.response.data.text()) as ApiErrorBody
+      if (body?.message) return new Error(body.message)
+    } catch {
+      /* 非 JSON 错误体 */
+    }
+  }
+  return err
+}
+
 /** 下载文件（导出 Excel / 模板），自动带上登录凭证 */
 export async function download(url: string, params?: Record<string, unknown>, fallbackName = 'export.xlsx') {
-  const resp = await http.get(url, { params: params ? cleanParams(params) : undefined, responseType: 'blob' })
+  const resp = await http
+    .get(url, { params: params ? cleanParams(params) : undefined, responseType: 'blob' })
+    .catch(async (e) => Promise.reject(await blobError(e)))
   const disposition: string = resp.headers['content-disposition'] ?? ''
   const match = /filename\*=UTF-8''([^;]+)/i.exec(disposition)
   const name = match ? decodeURIComponent(match[1]) : fallbackName
@@ -113,4 +128,32 @@ export async function download(url: string, params?: Record<string, unknown>, fa
   a.click()
   a.remove()
   URL.revokeObjectURL(href)
+}
+
+/**
+ * 打开 PDF（打印标签 / 拣货单 / 装箱单）：先同步打开新窗口避免被浏览器拦截，生成后在新窗口中预览打印。
+ */
+export async function openPdf(url: string, opts: { body?: unknown; params?: Record<string, unknown> } = {}) {
+  const win = window.open('', '_blank')
+  try {
+    const req = opts.body !== undefined
+      ? http.post(url, opts.body, { responseType: 'blob' })
+      : http.get(url, { params: opts.params ? cleanParams(opts.params) : undefined, responseType: 'blob' })
+    const resp = await req.catch(async (e) => Promise.reject(await blobError(e)))
+    const href = URL.createObjectURL(new Blob([resp.data as BlobPart], { type: 'application/pdf' }))
+    if (win) {
+      win.location.href = href
+    } else {
+      const a = document.createElement('a')
+      a.href = href
+      a.download = 'print.pdf'
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    }
+    window.setTimeout(() => URL.revokeObjectURL(href), 60_000)
+  } catch (e) {
+    win?.close()
+    throw e
+  }
 }

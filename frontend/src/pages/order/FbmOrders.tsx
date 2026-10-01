@@ -1,10 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { App, Button, Col, Form, Input, InputNumber, Modal, Row, Space, Table, Tabs } from 'antd'
-import { PlusOutlined } from '@ant-design/icons'
+import { PlusOutlined, PrinterOutlined, UploadOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { api, errorMessage } from '@/api/client'
+import { api, errorMessage, openPdf } from '@/api/client'
 import DataTable from '@/components/DataTable'
-import { FormModal, useAction } from '@/components/common'
+import { FormModal, ImportModal, useAction } from '@/components/common'
 import LinesEditor, { type Line } from '@/components/LinesEditor'
 import Perm from '@/components/Perm'
 import { ChannelSelect, CurrencySelect, ShopSelect, WarehouseSelect } from '@/components/selects'
@@ -86,6 +87,10 @@ export default function FbmOrders() {
   const [auditing, setAuditing] = useState<number[]>([])
   const [shipping, setShipping] = useState<Order[]>([])
   const [creating, setCreating] = useState(false)
+  const [waving, setWaving] = useState<number[] | null>(null)
+  const [trackingOpen, setTrackingOpen] = useState(false)
+  const navigate = useNavigate()
+  const { message: msg } = App.useApp()
   const cur = useBaseCurrency()
   const can = usePerm()
   const run = useAction()
@@ -153,7 +158,19 @@ export default function FbmOrders() {
                   <Perm code="order:audit">
                     <Button disabled={none} onClick={() => batch('/orders/revert-audit', { order_ids: ids }, '反审核', clearSelection)}>反审核</Button>
                   </Perm>
+                  <Perm code="order:ship">
+                    <Button onClick={() => setWaving(ids)}>{none ? '全部生成波次' : `生成波次（${ids.length}）`}</Button>
+                  </Perm>
+                  <Button icon={<PrinterOutlined />} disabled={none}
+                    onClick={() => openPdf('/fulfillment/packing-slips.pdf', { body: { order_ids: ids } }).catch((e) => msg.error(errorMessage(e)))}>
+                    装箱单
+                  </Button>
                 </>
+              )}
+              {['to_ship', 'shipped'].includes(tab) && (
+                <Perm code="order:ship">
+                  <Button icon={<UploadOutlined />} onClick={() => setTrackingOpen(true)}>导入运单号</Button>
+                </Perm>
               )}
               {['to_audit', 'to_ship', 'pending'].includes(tab) && (
                 <Perm code="order:edit">
@@ -198,6 +215,28 @@ export default function FbmOrders() {
         <Form.Item name="logistics_channel_id" label="物流渠道（用于预估运费）"><ChannelSelect usage="last_mile" /></Form.Item>
       </FormModal>
       <ShipModal orders={shipping} onClose={() => setShipping([])} onDone={reload} />
+      <FormModal<{ warehouse_id?: number; max_orders: number; remark?: string }>
+        open={!!waving}
+        title={waving?.length ? `为选中的 ${waving.length} 个订单生成拣货波次` : '按仓库生成拣货波次'}
+        width={480}
+        okText="生成波次"
+        initialValues={{ max_orders: 100 }}
+        onCancel={() => setWaving(null)}
+        onSubmit={async (v) => {
+          const r = await api.post<{ waves: { wave_no: string }[]; skipped: number }>('/fulfillment/waves', {
+            ...v, order_ids: waving?.length ? waving : undefined,
+          })
+          msg.success(`已生成 ${r.waves.length} 个波次：${r.waves.map((w) => w.wave_no).join('、')}${r.skipped ? `（${r.skipped} 单已在其他波次或不符合条件，已跳过）` : ''}`)
+          navigate('/warehouse/waves')
+        }}
+      >
+        {!waving?.length && <Form.Item name="warehouse_id" label="发货仓（为空则所有仓库，按仓自动分组）"><WarehouseSelect excludeFba /></Form.Item>}
+        <Form.Item name="max_orders" label="每个波次最多订单数"><InputNumber min={1} max={1000} style={{ width: '100%' }} /></Form.Item>
+        <Form.Item name="remark" label="备注"><Input /></Form.Item>
+      </FormModal>
+      <ImportModal open={trackingOpen} onClose={() => setTrackingOpen(false)} title="导入运单号（待发货订单将直接发货并回传平台）"
+        uploadUrl="/fulfillment/tracking-import" templateUrl="/fulfillment/tracking-template" onDone={reload}
+        extra={<span style={{ color: '#888' }}>订单号支持系统单号或平台单号；“是否发货”填 N 时只回填运单号不发货。结果中“新增”为发货单数，“更新”为仅回填的单数。</span>} />
       <FormModal
         open={creating}
         title="手工创建订单"

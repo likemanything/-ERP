@@ -11,8 +11,11 @@ FROM python:3.11-slim
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     ERP_FRONTEND_DIST=/app/web \
-    ERP_ENV=prod
+    ERP_ENV=prod \
+    ERP_PDF_FONT_PATH=/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc
 WORKDIR /app
+# 中文字体：打印的标签 / 拣货单 / 装箱单内嵌字体，任何电脑和打印机都能正确显示
+RUN apt-get update && apt-get install -y --no-install-recommends fonts-wqy-zenhei && rm -rf /var/lib/apt/lists/*
 RUN pip install --no-cache-dir uv
 COPY backend/pyproject.toml backend/uv.lock ./
 RUN uv sync --frozen --no-dev --no-install-project && rm -rf /root/.cache

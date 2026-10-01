@@ -37,6 +37,10 @@ class Settings(BaseSettings):
     # 静态前端目录（生产环境由后端托管构建后的前端）
     frontend_dist: str = ""
 
+    # PDF 打印嵌入字体（TTF/TTC，如 /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc）；
+    # 为空时使用 PDF 内置中文字体（不嵌入，由阅读器提供字形）
+    pdf_font_path: str = ""
+
 
 @lru_cache
 def get_settings() -> Settings:

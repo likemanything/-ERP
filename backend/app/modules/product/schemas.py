@@ -61,6 +61,7 @@ class BundleItemOut(Schema):
 class ProductBase(Schema):
     name: str = Field(min_length=1, max_length=255)
     name_en: str | None = None
+    barcode: str | None = Field(default=None, max_length=64)
     spu: str | None = None
     attributes: dict | None = None
     category_id: int | None = None
@@ -103,6 +104,7 @@ class ProductUpdate(Schema):
     sku: str | None = Field(default=None, min_length=1, max_length=64)
     name: str | None = None
     name_en: str | None = None
+    barcode: str | None = Field(default=None, max_length=64)
     spu: str | None = None
     attributes: dict | None = None
     category_id: int | None = None
@@ -141,6 +143,7 @@ class ProductOut(ORMOut):
     sku: str
     name: str
     name_en: str | None = None
+    barcode: str | None = Field(default=None, max_length=64)
     spu: str | None = None
     attributes: dict | None = None
     category_id: int | None = None

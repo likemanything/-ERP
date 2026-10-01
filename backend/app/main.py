@@ -19,6 +19,7 @@ def _api_router() -> APIRouter:
     from app.modules.distribution.router import router as distribution_router
     from app.modules.fba.router import router as fba_router
     from app.modules.finance.router import router as finance_router
+    from app.modules.fulfillment.router import router as fulfillment_router
     from app.modules.integration.router import router as integration_router
     from app.modules.logistics.router import router as logistics_router
     from app.modules.order.router import router as order_router
@@ -51,6 +52,7 @@ def _api_router() -> APIRouter:
         integration_router,
         distribution_router,
         portal_router,
+        fulfillment_router,
     ):
         api.include_router(r)
     return api

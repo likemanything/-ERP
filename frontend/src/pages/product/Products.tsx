@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { App, Button, Col, Divider, Drawer, Form, Input, InputNumber, Row, Select, Space, Switch, Table, Tabs, Tag } from 'antd'
-import { PlusOutlined, UploadOutlined } from '@ant-design/icons'
+import { PlusOutlined, PrinterOutlined, UploadOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, errorMessage } from '@/api/client'
 import DataTable, { useReload } from '@/components/DataTable'
 import { FormModal, ImportModal, useAction } from '@/components/common'
 import LinesEditor, { newKey, type Line } from '@/components/LinesEditor'
 import Perm from '@/components/Perm'
+import PrintLabelsModal, { type LabelLine } from '@/components/PrintLabels'
 import ProductCell from '@/components/ProductCell'
 import StatusTag from '@/components/StatusTag'
 import { BrandSelect, CategorySelect, CurrencySelect, SupplierSelect, UserSelect } from '@/components/selects'
@@ -138,6 +139,7 @@ function ProductDrawer({ open, product, onClose, onSaved }: { open: boolean; pro
                   <Col span={16}><Form.Item name="name" label="品名" rules={[{ required: true }]}><Input /></Form.Item></Col>
                   <Col span={8}><Form.Item name="spu" label="SPU（款号）"><Input /></Form.Item></Col>
                   <Col span={16}><Form.Item name="name_en" label="英文名"><Input /></Form.Item></Col>
+                  <Col span={8}><Form.Item name="barcode" label="商品条码（UPC/EAN）" tooltip="用于扫码验货、打印商品条码标签"><Input /></Form.Item></Col>
                   <Col span={8}><Form.Item name="product_type" label="产品类型"><Select options={dictOptions(PRODUCT_TYPE)} /></Form.Item></Col>
                   <Col span={8}><Form.Item name="status" label="状态"><Select options={dictOptions(PRODUCT_STATUS)} /></Form.Item></Col>
                   <Col span={8}><Form.Item name="unit" label="单位"><Input /></Form.Item></Col>
@@ -208,6 +210,7 @@ function ProductDrawer({ open, product, onClose, onSaved }: { open: boolean; pro
 export default function Products() {
   const [drawer, setDrawer] = useState<{ open: boolean; product: Product | null }>({ open: false, product: null })
   const [importOpen, setImportOpen] = useState(false)
+  const [labels, setLabels] = useState<LabelLine[] | null>(null)
   const reload = useReload('products')
   const qc = useQueryClient()
   const run = useAction()
@@ -229,13 +232,20 @@ export default function Products() {
           { name: 'status', type: 'select', label: '状态', options: dictOptions(PRODUCT_STATUS) },
           { name: 'product_type', type: 'select', label: '类型', options: dictOptions(PRODUCT_TYPE) },
         ]}
-        toolbar={() => (
-          <Perm code="product:edit">
-            <Space>
-              <Button type="primary" icon={<PlusOutlined />} onClick={() => setDrawer({ open: true, product: null })}>新增产品</Button>
-              <Button icon={<UploadOutlined />} onClick={() => setImportOpen(true)}>导入</Button>
-            </Space>
-          </Perm>
+        rowSelection
+        toolbar={({ selectedRows }) => (
+          <Space>
+            <Perm code="product:edit">
+              <Space>
+                <Button type="primary" icon={<PlusOutlined />} onClick={() => setDrawer({ open: true, product: null })}>新增产品</Button>
+                <Button icon={<UploadOutlined />} onClick={() => setImportOpen(true)}>导入</Button>
+              </Space>
+            </Perm>
+            <Button icon={<PrinterOutlined />} disabled={!selectedRows.length}
+              onClick={() => setLabels(selectedRows.map((r) => ({ key: r.id, product_id: r.id, name: r.sku, code: r.barcode ?? undefined, title: r.name_en || r.name, qty: 1 })))}>
+              打印标签
+            </Button>
+          </Space>
         )}
         columns={[
           { title: '产品', key: 'product', fixed: 'left', render: (_, r) => <ProductCell image={r.image_url} title={r.sku} sub={r.name} extra={r.spu ? `SPU ${r.spu}` : undefined} /> },
@@ -265,6 +275,7 @@ export default function Products() {
         ]}
       />
       <ProductDrawer open={drawer.open} product={drawer.product} onClose={() => setDrawer({ open: false, product: null })} onSaved={afterSave} />
+      <PrintLabelsModal open={!!labels} lines={labels ?? []} kinds={['sku', 'barcode']} onClose={() => setLabels(null)} />
       <ImportModal open={importOpen} onClose={() => setImportOpen(false)} title="导入产品" uploadUrl="/products/import"
         templateUrl="/products/import-template" onDone={afterSave}
         extra={<span style={{ color: '#888', fontSize: 12 }}>按 SKU 新增或更新；分类、品牌不存在时自动创建。组合产品请在页面中新建。</span>} />
