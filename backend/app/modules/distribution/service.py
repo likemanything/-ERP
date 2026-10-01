@@ -299,6 +299,25 @@ def review_recharge(ctx: Ctx, req_id: int, approve: bool, reason: str | None = N
     return req
 
 
+def staff_review(ctx: Ctx, req_id: int, approve: bool, reason: str | None) -> RechargeRequest:
+    """后台审核充值：配置了审批流程时按节点流转，否则需要 distribution:finance 权限。"""
+    from app.modules.approval import service as approval
+
+    if not approve and not reason:
+        raise BizError("请填写驳回原因")
+    req = get_or_404(ctx.db, RechargeRequest, req_id, "充值申请")
+    if req.status != "pending":
+        raise BizError("充值申请已处理")
+    res = approval.act(ctx, "recharge", req.id, approve, reason)
+    if res is None:
+        ctx.require("distribution:finance")
+    elif res == "pending":
+        audit(ctx, "approve", "distributor_recharge", req.id, f"充值申请 {req.request_no} 审批通过一级，流转下一级")
+        ctx.db.commit()
+        return req
+    return review_recharge(ctx, req_id, approve, reason)
+
+
 def adjust_balance(ctx: Ctx, distributor_id: int, amount: Decimal, remark: str) -> DistributorTransaction:
     d = get_or_404(ctx.db, Distributor, distributor_id, "分销商")
     txn = post_txn(ctx.db, d.id, amount, "adjust", ref_type="manual", remark=remark)

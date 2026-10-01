@@ -39,7 +39,7 @@ export function useAction() {
 
 /** 表单弹窗：提交时校验并调用 onSubmit，返回 true 时关闭 */
 export function FormModal<V extends object = Record<string, any>>({
-  open, title, onCancel, onSubmit, initialValues, width = 640, children, form: externalForm, okText,
+  open, title, onCancel, onSubmit, initialValues, width = 640, children, form: externalForm, okText, preserve = false,
 }: {
   open: boolean
   title: ReactNode
@@ -50,13 +50,20 @@ export function FormModal<V extends object = Record<string, any>>({
   children: ReactNode
   form?: FormInstance<V>
   okText?: string
+  /** 含 Form.List 时需为 true（配合 key 每次打开重新挂载），避免列表字段在 StrictMode 下被清空 */
+  preserve?: boolean
 }) {
   const [innerForm] = Form.useForm<V>()
   const form = externalForm ?? innerForm
   const [loading, setLoading] = useState(false)
   const { message } = App.useApp()
   const submit = async () => {
-    const values = await form.validateFields()
+    let values: V
+    try {
+      values = await form.validateFields()
+    } catch {
+      return // 校验失败，表单内已提示
+    }
     setLoading(true)
     try {
       await onSubmit(values)
@@ -79,7 +86,7 @@ export function FormModal<V extends object = Record<string, any>>({
       okText={okText ?? '保存'}
       mask={{ closable: false }}
     >
-      <Form form={form} layout="vertical" initialValues={initialValues as V} preserve={false} style={{ marginTop: 12 }}>
+      <Form form={form} layout="vertical" initialValues={initialValues as V} preserve={preserve} style={{ marginTop: 12 }}>
         {children}
       </Form>
     </Modal>

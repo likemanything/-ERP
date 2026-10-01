@@ -12,7 +12,7 @@ from app.common.crud import build_crud_router, ensure_not_referenced, get_or_404
 from app.common.excel import export_xlsx
 from app.common.pagination import PageParams, page_params, paginate
 from app.common.schemas import Msg, Option, Page
-from app.core.deps import Ctx, perm
+from app.core.deps import Ctx, get_ctx, perm
 from app.core.errors import BizError
 from app.core.security import hash_password
 from app.core.types import q2, utcnow
@@ -251,11 +251,9 @@ def list_recharges(
     return page
 
 
-@router.post("/recharges/{req_id}/review", response_model=RechargeOut, summary="审核充值（确认到账 / 驳回）")
-def review_recharge(req_id: int, body: ReviewIn, ctx: Ctx = Depends(perm("distribution:finance"))):
-    if not body.approve and not body.reason:
-        raise BizError("请填写驳回原因")
-    return recharge_out(ctx, [service.review_recharge(ctx, req_id, body.approve, body.reason)])[0]
+@router.post("/recharges/{req_id}/review", response_model=RechargeOut, summary="审核充值（确认到账 / 驳回；多级审批时流转下一级）")
+def review_recharge(req_id: int, body: ReviewIn, ctx: Ctx = Depends(get_ctx)):
+    return recharge_out(ctx, [service.staff_review(ctx, req_id, body.approve, body.reason)])[0]
 
 
 @router.get("/statement", response_model=StatementOut, summary="分销商对账单")

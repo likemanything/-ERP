@@ -392,12 +392,16 @@ def recharges(params: PageParams = Depends(page_params), p: PortalCtx = Depends(
 
 @router.post("/recharges", response_model=RechargeOut, summary="提交充值申请（线下打款后提交，财务确认后到账）")
 def create_recharge(body: RechargeIn, p: PortalCtx = Depends(get_portal_ctx)):
-    req = service.create_recharge(p.db, p.distributor, body.model_dump())
+    from app.modules.approval import service as approval
     from app.modules.system.models import Notification
 
-    p.db.add(Notification(category="approval", title=f"分销商 {p.distributor.name} 提交充值申请",
-                          content=f"{req.amount} {req.currency}，{req.payment_method or ''} {req.transaction_no or ''}",
-                          link="/distribution/recharges"))
+    req = service.create_recharge(p.db, p.distributor, body.model_dump())
+    summary = f"{p.distributor.name} 充值 {req.amount} {req.currency}，{req.payment_method or ''} {req.transaction_no or ''}"
+    inst = approval.start(p.ctx, "recharge", req.id, doc_no=req.request_no, amount=req.amount, currency=req.currency,
+                          summary=summary, link="/distribution/recharges", submitter_name=p.distributor.name)
+    if inst is None:
+        p.db.add(Notification(category="approval", title=f"分销商 {p.distributor.name} 提交充值申请",
+                              content=summary, link="/distribution/recharges"))
     p.db.commit()
     return {c.key: getattr(req, c.key) for c in RechargeRequest.__table__.columns}
 

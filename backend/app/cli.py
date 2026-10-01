@@ -223,9 +223,51 @@ def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
                             "city": "San Jose", "address1": f"{100 + i} Market St", "postcode": "95113"},
             })
             db.commit()
-        dist.create_recharge(db, dealer, {"amount": Decimal("1500"), "payment_method": "PayPal", "transaction_no": "PP-88231"})
+        # 多级审批：采购主管 / 财务经理两个演示账号；大额采购两级审批，分销充值由财务确认
+        from app.modules.approval import service as approval
+        from app.modules.approval.models import ApprovalFlow
+        from app.modules.system.models import Role
+        from app.modules.system.service import create_user
+
+        roles = {r.code: r for r in db.execute(select(Role)).scalars().all()}
+        buyer = create_user(ctx, {"username": "caigou", "password": "caigou123", "real_name": "采购主管",
+                                  "role_ids": [roles["purchaser"].id]})
+        create_user(ctx, {"username": "caiwu", "password": "caiwu123", "real_name": "财务经理", "role_ids": [roles["finance"].id]})
+        db.add(ApprovalFlow(doc_type="purchase_order", name="大额采购审批（≥ ¥20,000）", min_amount=Decimal(20000), steps=[
+            {"name": "采购主管", "approver_type": "user", "approver_ids": [buyer.id], "mode": "any"},
+            {"name": "财务审核", "approver_type": "role", "approver_ids": [roles["finance"].id], "mode": "any"},
+        ]))
+        db.add(ApprovalFlow(doc_type="recharge", name="分销充值确认", steps=[
+            {"name": "财务确认到账", "approver_type": "role", "approver_ids": [roles["finance"].id], "mode": "any"},
+        ]))
         db.commit()
-        print(f"演示数据已生成：登录账号 {username} / {password}；分销商门户账号 dealer / dealer123456")
+        big = purchase.create_order(ctx, {"supplier_id": s1.id, "warehouse_id": wh.id, "remark": "旺季备货",
+                                          "lines": [{"product_id": products["LAMP-01"].id, "qty": 600, "unit_price": Decimal(42)}]})
+        purchase.submit_order(ctx, big.id)
+        req = dist.create_recharge(db, dealer, {"amount": Decimal("1500"), "payment_method": "PayPal", "transaction_no": "PP-88231"})
+        approval.start(ctx, "recharge", req.id, doc_no=req.request_no, amount=req.amount, currency=req.currency,
+                       summary=f"{dealer.name} 充值 {req.amount} {req.currency}", link="/distribution/recharges",
+                       submitter_name=dealer.name)
+        db.commit()
+
+        # 加工单：办公套装 = 台灯 + 支架 + 2 条数据线
+        from app.modules.assembly import service as assembly
+
+        kit = Product(sku="SET-OFFICE", name="桌面办公套装（台灯+支架+数据线）", name_en="Desk Office Bundle", category_id=cat_el.id,
+                      brand_id=brand.id, purchase_cost=Decimal(0), weight_kg=Decimal("2.3"), length_cm=Decimal(45),
+                      width_cm=Decimal(30), height_cm=Decimal(18), units_per_carton=8, image_url=placeholder_image("SET-OFFICE"),
+                      barcode=_ean13("690123456099"))
+        db.add(kit)
+        db.commit()
+        recipe = [{"product_id": products["LAMP-01"].id, "qty_per_unit": 1}, {"product_id": products["STAND-05"].id, "qty_per_unit": 1},
+                  {"product_id": products["CABLE-04"].id, "qty_per_unit": 2}]
+        done = assembly.create_order(ctx, {"order_type": "assemble", "warehouse_id": wh.id, "product_id": kit.id, "qty": 10,
+                                           "processing_fee": Decimal(50), "lines": recipe, "remark": "首批套装"})
+        assembly.complete_order(ctx, done.id)
+        assembly.create_order(ctx, {"order_type": "assemble", "warehouse_id": wh.id, "product_id": kit.id, "qty": 20,
+                                    "processing_fee": Decimal(100), "lines": recipe})
+        print(f"演示数据已生成：登录账号 {username} / {password}；分销商门户账号 dealer / dealer123456；"
+              "审批演示账号 caigou / caigou123、caiwu / caiwu123")
 
 
 def main(argv: list[str] | None = None) -> None:

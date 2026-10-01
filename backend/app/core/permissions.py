@@ -87,6 +87,7 @@ PERMISSION_GROUPS: tuple[PermGroup, ...] = (
         ("inventory:doc:view", "查看出入库单"),
         ("inventory:doc:edit", "新增/编辑出入库单"),
         ("inventory:doc:approve", "审核出入库单（过账）"),
+        ("inventory:assembly", "加工单（组装 / 拆分）"),
         ("inventory:ledger:view", "查看库存流水"),
     ),
     _g(
@@ -146,6 +147,7 @@ PERMISSION_GROUPS: tuple[PermGroup, ...] = (
         ("system:dept", "部门管理"),
         ("system:log", "操作日志"),
         ("system:setting", "系统参数"),
+        ("system:approval", "审批流程配置"),
     ),
 )
 
@@ -183,7 +185,7 @@ PRESET_ROLES: dict[str, tuple[str, list[str]]] = {
         "仓管",
         [
             "dashboard:view", "product:view", "warehouse:view", "inventory:view", "inventory:doc:view",
-            "inventory:doc:edit", "inventory:ledger:view", "purchase:order:view", "purchase:receive",
+            "inventory:doc:edit", "inventory:assembly", "inventory:ledger:view", "purchase:order:view", "purchase:receive",
             "order:view", "order:ship", "fba:shipment:view", "fba:shipment:edit", "logistics:view",
         ],
     ),

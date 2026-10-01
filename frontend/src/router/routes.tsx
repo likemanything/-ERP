@@ -2,6 +2,7 @@ import { lazy, type ComponentType, type LazyExoticComponent, type ReactNode } fr
 import {
   AccountBookOutlined,
   ApartmentOutlined,
+  AuditOutlined,
   AppstoreOutlined,
   BarChartOutlined,
   CarOutlined,
@@ -39,6 +40,10 @@ export const MENU: MenuGroup[] = [
   {
     key: 'home', label: '首页', icon: <DashboardOutlined />,
     children: [{ path: '/dashboard', label: '数据看板', perm: 'dashboard:view', element: p(() => import('@/pages/Dashboard')) }],
+  },
+  {
+    key: 'approval', label: '审批', icon: <AuditOutlined />,
+    children: [{ path: '/approvals', label: '审批中心', element: p(() => import('@/pages/approval/MyApprovals')) }],
   },
   {
     key: 'sales', label: '销售', icon: <ShoppingCartOutlined />,
@@ -88,6 +93,7 @@ export const MENU: MenuGroup[] = [
       { path: '/inventory/batches', label: '批次与库龄', perm: 'inventory:view', element: p(() => import('@/pages/warehouse/Batches')) },
       { path: '/warehouse/waves', label: '拣货波次', perm: 'order:view', element: p(() => import('@/pages/warehouse/Waves')) },
       { path: '/warehouse/scan-ship', label: '扫码验货发货', perm: 'order:ship', element: p(() => import('@/pages/warehouse/ScanShip')) },
+      { path: '/warehouse/assembly', label: '加工单（组装/拆分）', perm: 'inventory:doc:view', element: p(() => import('@/pages/warehouse/Assembly')) },
       { path: '/warehouses', label: '仓库设置', perm: 'warehouse:view', element: p(() => import('@/pages/warehouse/Warehouses')) },
     ],
   },
@@ -147,6 +153,7 @@ export const MENU: MenuGroup[] = [
       { path: '/system/departments', label: '部门管理', perm: 'system:dept', element: p(() => import('@/pages/system/Departments')) },
       { path: '/system/logs', label: '操作日志', perm: 'system:log', element: p(() => import('@/pages/system/AuditLogs')) },
       { path: '/system/settings', label: '系统参数', perm: 'system:setting', element: p(() => import('@/pages/system/Settings')) },
+      { path: '/system/approval-flows', label: '审批流程', perm: 'system:approval', element: p(() => import('@/pages/system/ApprovalFlows')) },
     ],
   },
 ]

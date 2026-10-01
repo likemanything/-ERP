@@ -22,6 +22,7 @@ from app.common.numbering import next_doc_no
 from app.core.deps import Ctx
 from app.core.errors import BizError
 from app.core.types import q2, q4, utcnow
+from app.modules.approval import service as approval
 from app.modules.product.models import Product, ProductSupplier
 from app.modules.purchase.models import (
     PaymentRequest,
@@ -206,9 +207,14 @@ def submit_order(ctx: Ctx, po_id: int) -> PurchaseOrder:
         raise BizError("采购单没有明细")
     po.submitted_at = utcnow()
     po.reject_reason = None
-    if get_setting(ctx.db, "purchase.require_approval"):
+    if get_setting(ctx.db, "purchase.require_approval") or approval.requires_approval(ctx.db, "purchase_order", po.total_amount, po.currency):
         po.status = PurchaseStatus.PENDING_APPROVAL
-        _notify_approvers(ctx, po)
+        supplier = ctx.db.get(Supplier, po.supplier_id)
+        inst = approval.start(ctx, "purchase_order", po.id, doc_no=po.po_no, amount=po.total_amount, currency=po.currency,
+                              summary=f"{supplier.name if supplier else ''} {po.total_amount} {po.currency}",
+                              link=f"/purchase/orders?id={po.id}")
+        if inst is None:
+            _notify_approvers(ctx, po)
     else:
         po.status = PurchaseStatus.APPROVED
         po.approved_at = utcnow()
@@ -231,10 +237,17 @@ def _notify_approvers(ctx: Ctx, po: PurchaseOrder) -> None:
     )
 
 
-def approve_order(ctx: Ctx, po_id: int) -> PurchaseOrder:
+def approve_order(ctx: Ctx, po_id: int, comment: str | None = None) -> PurchaseOrder:
     po = get_or_404(ctx.db, PurchaseOrder, po_id, "采购单", for_update=True)
     if po.status != PurchaseStatus.PENDING_APPROVAL:
         raise BizError("采购单不在待审批状态")
+    res = approval.act(ctx, "purchase_order", po.id, True, comment)
+    if res is None:
+        ctx.require("purchase:order:approve")
+    elif res == "pending":
+        audit(ctx, "approve", "purchase_order", po.id, f"采购单 {po.po_no} 审批通过一级，流转下一级")
+        ctx.db.commit()
+        return po
     po.status = PurchaseStatus.APPROVED
     po.approved_by = ctx.user_id
     po.approved_at = utcnow()
@@ -247,6 +260,8 @@ def reject_order(ctx: Ctx, po_id: int, reason: str) -> PurchaseOrder:
     po = get_or_404(ctx.db, PurchaseOrder, po_id, "采购单", for_update=True)
     if po.status != PurchaseStatus.PENDING_APPROVAL:
         raise BizError("采购单不在待审批状态")
+    if approval.act(ctx, "purchase_order", po.id, False, reason) is None:
+        ctx.require("purchase:order:approve")
     po.status = PurchaseStatus.REJECTED
     po.reject_reason = reason
     audit(ctx, "reject", "purchase_order", po.id, f"驳回采购单 {po.po_no}：{reason}")
@@ -357,6 +372,7 @@ def cancel_order(ctx: Ctx, po_id: int) -> PurchaseOrder:
     if po.paid_amount or po.requested_amount:
         raise BizError("采购单存在请款/付款记录，请先处理请款单")
     po.status = PurchaseStatus.CANCELLED
+    approval.cancel_pending(ctx.db, "purchase_order", po.id)
     # 关联的采购计划退回待处理
     for plan in ctx.db.execute(select(PurchasePlan).where(PurchasePlan.purchase_order_id == po.id)).scalars().all():
         plan.status = PlanStatus.PENDING
@@ -470,12 +486,16 @@ def create_payment_request(ctx: Ctx, data: dict) -> PaymentRequest:
         total += amount
     req.currency = currency or supplier.currency
     req.amount = q2(total)
-    if not get_setting(db, "payment.require_approval"):
+    need_flow = approval.requires_approval(db, "payment_request", req.amount, req.currency)
+    if not get_setting(db, "payment.require_approval") and not need_flow:
         req.status = PaymentRequestStatus.APPROVED
         req.approved_by = ctx.user_id
         req.approved_at = utcnow()
     db.add(req)
     db.flush()
+    if req.status == PaymentRequestStatus.PENDING:
+        approval.start(ctx, "payment_request", req.id, doc_no=req.request_no, amount=req.amount, currency=req.currency,
+                       summary=f"{supplier.name} 请款 {req.amount} {req.currency}", link="/purchase/payments")
     audit(ctx, "create", "payment_request", req.id, f"请款单 {req.request_no}，{req.amount} {req.currency}")
     db.commit()
     return req
@@ -487,10 +507,17 @@ def _release_requested(db, req: PaymentRequest) -> None:
         po.requested_amount = q2(max(Decimal(0), Decimal(po.requested_amount or 0) - Decimal(ln.amount)))
 
 
-def approve_payment(ctx: Ctx, req_id: int) -> PaymentRequest:
+def approve_payment(ctx: Ctx, req_id: int, comment: str | None = None) -> PaymentRequest:
     req = get_or_404(ctx.db, PaymentRequest, req_id, "请款单", for_update=True)
     if req.status != PaymentRequestStatus.PENDING:
         raise BizError("请款单不在待审批状态")
+    res = approval.act(ctx, "payment_request", req.id, True, comment)
+    if res is None:
+        ctx.require("purchase:payment:approve")
+    elif res == "pending":
+        audit(ctx, "approve", "payment_request", req.id, f"请款单 {req.request_no} 审批通过一级，流转下一级")
+        ctx.db.commit()
+        return req
     req.status = PaymentRequestStatus.APPROVED
     req.approved_by = ctx.user_id
     req.approved_at = utcnow()
@@ -503,6 +530,8 @@ def reject_payment(ctx: Ctx, req_id: int, reason: str) -> PaymentRequest:
     req = get_or_404(ctx.db, PaymentRequest, req_id, "请款单", for_update=True)
     if req.status != PaymentRequestStatus.PENDING:
         raise BizError("请款单不在待审批状态")
+    if approval.act(ctx, "payment_request", req.id, False, reason) is None:
+        ctx.require("purchase:payment:approve")
     req.status = PaymentRequestStatus.REJECTED
     req.reject_reason = reason
     _release_requested(ctx.db, req)
@@ -535,6 +564,7 @@ def cancel_payment(ctx: Ctx, req_id: int) -> PaymentRequest:
     if req.status not in (PaymentRequestStatus.PENDING, PaymentRequestStatus.APPROVED):
         raise BizError("当前状态不能取消")
     req.status = PaymentRequestStatus.CANCELLED
+    approval.cancel_pending(ctx.db, "payment_request", req.id)
     _release_requested(ctx.db, req)
     audit(ctx, "cancel", "payment_request", req.id, f"取消请款单 {req.request_no}")
     ctx.db.commit()

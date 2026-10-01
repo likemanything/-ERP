@@ -159,6 +159,10 @@ class RejectIn(Schema):
     reason: str = Field(min_length=1, max_length=255)
 
 
+class ApproveIn(Schema):
+    comment: str | None = Field(default=None, max_length=255)
+
+
 class MarkOrderedIn(Schema):
     supplier_order_no: str | None = None
     order_date: date | None = None

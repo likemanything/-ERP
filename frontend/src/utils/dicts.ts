@@ -253,3 +253,21 @@ export const WAVE_STATUS: Dict = {
   completed: ['已完成', 'green'],
   cancelled: ['已取消', 'default'],
 }
+
+export const APPROVAL_STATUS: Dict = {
+  pending: ['审批中', 'orange'],
+  approved: ['已通过', 'green'],
+  rejected: ['已驳回', 'red'],
+  cancelled: ['已撤销', 'default'],
+}
+
+export const ASSEMBLY_TYPE: Dict = {
+  assemble: ['组装', 'blue'],
+  disassemble: ['拆分', 'purple'],
+}
+
+export const ASSEMBLY_STATUS: Dict = {
+  draft: ['待加工', 'orange'],
+  completed: ['已完成', 'green'],
+  cancelled: ['已作废', 'default'],
+}

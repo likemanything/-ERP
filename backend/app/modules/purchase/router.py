@@ -10,7 +10,7 @@ from app.common.enums import PlanStatus, PurchaseStatus
 from app.common.excel import export_xlsx
 from app.common.pagination import PageParams, page_params, paginate
 from app.common.schemas import IdsIn, Msg, Page
-from app.core.deps import Ctx, perm
+from app.core.deps import Ctx, get_ctx, perm
 from app.core.errors import BizError
 from app.core.types import q2
 from app.modules.product.models import Product
@@ -24,6 +24,7 @@ from app.modules.purchase.models import (
     PurchaseReturn,
 )
 from app.modules.purchase.schemas import (
+    ApproveIn,
     MarkOrderedIn,
     PayableRow,
     PayIn,
@@ -271,13 +272,14 @@ def submit_order(po_id: int, ctx: Ctx = Depends(perm("purchase:order:edit"))):
     return po_out(ctx, service.submit_order(ctx, po_id))
 
 
-@router.post("/purchase-orders/{po_id}/approve", response_model=POOut, summary="审批通过")
-def approve_order(po_id: int, ctx: Ctx = Depends(perm("purchase:order:approve"))):
-    return po_out(ctx, service.approve_order(ctx, po_id))
+@router.post("/purchase-orders/{po_id}/approve", response_model=POOut, summary="审批通过（多级审批时流转下一级）")
+def approve_order(po_id: int, body: ApproveIn | None = None, ctx: Ctx = Depends(get_ctx)):
+    # 权限：配置了审批流程时由流程节点决定，否则需要 purchase:order:approve
+    return po_out(ctx, service.approve_order(ctx, po_id, body.comment if body else None))
 
 
 @router.post("/purchase-orders/{po_id}/reject", response_model=POOut, summary="驳回")
-def reject_order(po_id: int, body: RejectIn, ctx: Ctx = Depends(perm("purchase:order:approve"))):
+def reject_order(po_id: int, body: RejectIn, ctx: Ctx = Depends(get_ctx)):
     return po_out(ctx, service.reject_order(ctx, po_id, body.reason))
 
 
@@ -438,13 +440,13 @@ def create_payment(body: PaymentRequestIn, ctx: Ctx = Depends(perm("purchase:pay
     return payment_out(ctx, [service.create_payment_request(ctx, body.model_dump())])[0]
 
 
-@router.post("/payment-requests/{req_id}/approve", response_model=PaymentRequestOut, summary="审批请款")
-def approve_payment(req_id: int, ctx: Ctx = Depends(perm("purchase:payment:approve"))):
-    return payment_out(ctx, [service.approve_payment(ctx, req_id)])[0]
+@router.post("/payment-requests/{req_id}/approve", response_model=PaymentRequestOut, summary="审批请款（多级审批时流转下一级）")
+def approve_payment(req_id: int, body: ApproveIn | None = None, ctx: Ctx = Depends(get_ctx)):
+    return payment_out(ctx, [service.approve_payment(ctx, req_id, body.comment if body else None)])[0]
 
 
 @router.post("/payment-requests/{req_id}/reject", response_model=PaymentRequestOut, summary="驳回请款")
-def reject_payment(req_id: int, body: RejectIn, ctx: Ctx = Depends(perm("purchase:payment:approve"))):
+def reject_payment(req_id: int, body: RejectIn, ctx: Ctx = Depends(get_ctx)):
     return payment_out(ctx, [service.reject_payment(ctx, req_id, body.reason)])[0]
 
 

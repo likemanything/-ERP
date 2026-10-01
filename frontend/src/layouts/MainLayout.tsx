@@ -1,7 +1,7 @@
 import { Suspense, useMemo, useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import { App, Avatar, Badge, Breadcrumb, Button, Dropdown, Empty, Form, Input, Layout, Menu, Popover, Spin, Tag, Typography } from 'antd'
-import { BellOutlined, LockOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/icons'
+import { AuditOutlined, BellOutlined, LockOutlined, LogoutOutlined, MenuFoldOutlined, MenuUnfoldOutlined, UserOutlined } from '@ant-design/icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { api, type Page } from '@/api/client'
 import { useAuth, usePerm } from '@/store/auth'
@@ -68,6 +68,21 @@ function Notifications() {
   )
 }
 
+function PendingApprovals() {
+  const navigate = useNavigate()
+  const { data } = useQuery({
+    queryKey: ['approval-count'],
+    queryFn: () => api.get<{ count: number }>('/approval/pending/count'),
+    refetchInterval: 60_000,
+  })
+  if (!data?.count) return null
+  return (
+    <Badge count={data.count} size="small">
+      <Button size="small" icon={<AuditOutlined />} onClick={() => navigate('/approvals')}>待审批</Button>
+    </Badge>
+  )
+}
+
 export default function MainLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const [pwdOpen, setPwdOpen] = useState(false)
@@ -125,6 +140,7 @@ export default function MainLayout() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
             <Tag color="blue">{tenant?.name}</Tag>
             <Typography.Text type="secondary">本位币 {tenant?.base_currency}</Typography.Text>
+            <PendingApprovals />
             <Notifications />
             <Dropdown
               menu={{

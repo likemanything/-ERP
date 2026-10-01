@@ -7,6 +7,7 @@ import { api, errorMessage, type Page } from '@/api/client'
 import DataTable from '@/components/DataTable'
 import { FormModal, useAction } from '@/components/common'
 import LinesEditor, { newKey, type Line } from '@/components/LinesEditor'
+import ApprovalTimeline from '@/components/ApprovalTimeline'
 import Perm from '@/components/Perm'
 import ProductCell from '@/components/ProductCell'
 import StatusTag from '@/components/StatusTag'
@@ -161,6 +162,7 @@ function PODetail({ po, onClose }: { po: PO | null; onClose: () => void }) {
         {po.reject_reason && <Descriptions.Item label="驳回原因" span={3}><span style={{ color: '#cf1322' }}>{po.reject_reason}</span></Descriptions.Item>}
         <Descriptions.Item label="备注" span={3}>{po.remark ?? '-'}</Descriptions.Item>
       </Descriptions>
+      <ApprovalTimeline docType="purchase_order" docId={po.id} />
       <Divider titlePlacement="start">采购明细</Divider>
       <Table<PO> size="small" rowKey="id" pagination={false} dataSource={po.lines} columns={[
         { title: '产品', render: (_, l) => <ProductCell image={l.image_url} title={l.sku} sub={l.product_name} size={32} /> },
