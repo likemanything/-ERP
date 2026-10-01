@@ -26,6 +26,10 @@
 | 财务 | **利润报表**（按 MSKU / SKU / 店铺 / 天 / 月）、多币种按月度汇率折算本位币；结算明细导入并用实际佣金/FBA 费替换预估；费用单（店铺/公司公共）；库存估值（含头程在途）；汇率管理 |
 | 广告 | 广告日报导入/同步，按活动/MSKU/店铺统计 曝光、点击、CTR、CPC、CVR、ACoS、ROAS，每日趋势；广告费自动计入利润 |
 | 报表 | 首页看板（KPI、30 天趋势、店铺占比、热销 TOP10、待办）、销售统计（天/月/店铺/MSKU/SKU/国家）、库龄分析、库存周转/滞销 |
+| 分销 | 给分销商开通门户账号（中英双语）：商品目录与等级价 / 专属价、可售库存；**一件代发 / 批发**下单实时报价（货款 + 运费 + 操作费）并从**预存款 + 授信额度**扣款；充值申请审核、余额调整、对账单；取消 / 退货自动退款；API Key 对接分销商自有系统 |
+| 仓储作业 | 拣货波次（按库位汇总的拣货单 + 按单分拣）、装箱单、**扫码验货发货**（SKU / 条码 / FNSKU / MSKU 逐件校验）、运单号 Excel 导入并回传平台；FNSKU / SKU / 商品条码标签（热敏与 A4 标签纸）、FBA 箱唛 |
+| 加工单 | 组装（子件 → 成品）与拆分，按 FIFO 结转子件成本 + 加工费，自动带出上次配方 |
+| 审批 | 采购单 / 请款单 / 分销充值的**多级审批流**：按金额门槛匹配，每级指定人员或角色、或签 / 会签；审批中心与待审批提醒 |
 | 系统 | 多企业（租户）注册开通、用户、角色（按钮级权限树）、**店铺级数据权限**、部门、操作日志、系统参数、站内消息 |
 
 ### 核心算法
@@ -123,9 +127,10 @@ backend/   FastAPI + SQLAlchemy 2 + Alembic + Pydantic 2，PostgreSQL（开发�
   app/core/          配置、数据库与多租户隔离、认证与权限依赖、错误处理
   app/common/        分页、通用 CRUD、单据编号、汇率、Excel、操作日志
   app/modules/<域>/   models / schemas / service / router
-    system shop product supplier warehouse purchase logistics
-    order fba replenishment finance ads report integration
+    system shop product supplier warehouse purchase logistics order fba replenishment
+    finance ads report integration distribution fulfillment assembly approval
   app/integrations/  平台连接器（amazon / shopify / demo）与标准 DTO
+frontend/src/portal/ 分销商门户（独立布局、中英双语）
   app/worker.py      定时同步 worker（PostgreSQL 下多实例安全）
   app/cli.py         init-db / create-tenant / seed-demo
 ```
@@ -142,14 +147,17 @@ backend/   FastAPI + SQLAlchemy 2 + Alembic + Pydantic 2，PostgreSQL（开发�
 
 ## 与领星 ERP 的对照与路线图
 
-已覆盖领星中小卖家最常用的主链路（店铺授权、产品与配对、采购、仓库、FBA 发货与头程分摊、补货建议、订单、利润报表、广告分析、权限）。后续计划：
+已覆盖领星中小卖家最常用的主链路（店铺授权、产品与配对、采购、仓库、FBA 发货与头程分摊、补货建议、订单、利润报表、广告分析、权限），
+并补充了分销商门户、仓储作业（波次 / 扫码发货 / 标签打印）、加工单、多级审批。
 
-- [ ] Amazon Advertising API 直连（目前通过报表导入/演示数据）、Walmart / TikTok Shop / Temu 原生连接器
-- [ ] Amazon Inbound（Send-to-Amazon）货件创建与箱唛/FNSKU 标签打印
-- [ ] 自发货面单对接（物流商 API）、拣货单/波次
-- [ ] 加工单（组装/拆分）、多级审批流配置
-- [ ] 客服（邮件/Review/Feedback）、Listing 跟卖与价格监控
-- [ ] 多语言界面
+下一步（详见 [任务看板](docs/ai/08-roadmap.md)）：Walmart / TikTok Shop / Amazon Advertising 原生连接器（开发中）、分销增强、物流商面单对接、
+Amazon Send-to-Amazon、平台结算对账、移动端扫码作业等。
+
+## 参与开发（人类与 AI）
+
+- AI 代理入口：[`CLAUDE.md`](CLAUDE.md)（Claude Code 自动加载）/ [`AGENTS.md`](AGENTS.md)（其他工具）
+- 入职指南：[`docs/ai/00-onboarding.md`](docs/ai/00-onboarding.md) —— 环境、演示账号、阅读顺序
+- 全部文档：[`docs/`](docs/README.md)（架构、规范、工作流、协同协议、配方、踩坑、路线图、ADR、交接记录）
 
 ## 许可证
 
