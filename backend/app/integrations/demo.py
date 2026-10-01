@@ -164,10 +164,10 @@ class DemoConnector(PlatformConnector):
         while day <= end:
             for idx, (code, _title, price, _ful, velocity) in enumerate(CATALOG):
                 rng = self._rng("ads", code, day.isoformat())
-                impressions = int(velocity * rng.randint(250, 600))
-                clicks = int(impressions * rng.uniform(0.004, 0.012))
-                orders = sum(1 for _ in range(clicks) if rng.random() < 0.11)
-                cpc = Decimal(str(round(rng.uniform(0.45, 1.35), 2)))
+                impressions = int(velocity * rng.randint(120, 300))
+                clicks = int(impressions * rng.uniform(0.003, 0.008))
+                orders = sum(1 for _ in range(clicks) if rng.random() < 0.14)
+                cpc = Decimal(str(round(rng.uniform(0.35, 0.95), 2)))
                 yield AdMetricDTO(
                     metric_date=day, campaign_id=f"DEMO-{self.shop.id}-{idx}", campaign_name=f"SP-{code}-自动",
                     ad_group="自动投放", ad_type="SP", msku=self._msku(code), asin=f"B0DEMO{self.shop.id:02d}{idx:02d}",
