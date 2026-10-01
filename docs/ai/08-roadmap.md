@@ -27,7 +27,7 @@
 | ID | 标题 | 优先级 | 状态 | 负责人 | 分支 | 更新 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
 | T15 | 平台连接器：Walmart / TikTok Shop / Amazon Ads | P1 | 已完成 | claude（会话 016P7Q） | `claude/wizardly-meitner-h2vsdz` | 2026-10-01 | 后续见 T30；[交接记录](../handoff/2026-10-01-platform-connectors.md) |
-| T18a | 分销增强：分销商专属价格、门户子账号与角色权限 | P1 | 进行中 | claude（会话 016P7Q） | `claude/wizardly-meitner-h2vsdz` | 2026-10-01 | |
+| T18a | 分销增强：分销商专属价格、门户子账号与角色权限 | P1 | 待认领 | | | 2026-10-01 | 设计草案见 T18 任务卡，尚无代码 |
 | T18b | 分销增强：发货通知（站内消息 + 签名 Webhook） | P1 | 待认领 | | | | 邮件通知需负责人确认 SMTP 服务 |
 | T18c | 分销增强：月结对账单在线确认、门户导出运单号 | P1 | 待认领 | | | | |
 | T19 | 物流商面单对接（取号 + 打印面单） | P1 | 待认领 | | | | 依赖 T19a 选型 |
@@ -62,6 +62,12 @@
 - **验收**：每项有测试；门户中英文案齐全；不泄露成本；演示数据覆盖。
 - **涉及**：`distribution/*`、`src/portal/*`、`pages/distribution/*`；需要迁移（单个）。
 - **规模**：L，已拆为 T18a（价格 + 子账号）、T18b（通知 + Webhook）、T18c（月结确认 + 导出）。
+- **T18a 设计草案**（2026-10-01 讨论确定，尚未实现）：
+  - 新表 `distributor_prices`（distributor_id、product_id、price〔分销商币种〕、remark，唯一键 tenant+distributor+product）；
+    价格优先级改为 **专属价 > 等级价 > 基础价 × 折扣**：`service.unit_price` 增加 `special_prices` 参数，`_resolve_lines` 与门户 `_catalog_rows` 传入；门户目录返回价格来源，显示「专属价」标签。
+  - 后台接口：`GET/PUT /distribution/distributors/{id}/prices`、`DELETE …/prices/{product_id}`、Excel 导入（sku、price、remark）；只允许已上架分销的商品。
+  - `users.portal_role`（admin / order / finance / viewer，空 = admin，需 batch 迁移）；门户动作权限：下单 / 取消 / 导入 = admin、order；充值 = admin、finance；查看流水 / 充值记录 / 对账单 = admin、finance、viewer；子账号与 API Key = admin（API Key 视为 admin，但不能管理账号）。
+  - 门户新增「账号管理」页（主账号增删子账号、改角色、禁用、重置密码；不能停用自己、至少保留一个启用的主账号）；`/portal/me` 返回 role，前端按角色隐藏菜单与按钮；后台账号抽屉可设置角色。
 
 ### T19 物流商面单对接
 
