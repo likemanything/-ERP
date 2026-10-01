@@ -124,3 +124,20 @@ def any_perm(*codes: str) -> Callable[..., Ctx]:
         return ctx
 
     return _dep
+
+
+class _SystemUser:
+    """后台任务使用的虚拟用户（拥有全部权限）。"""
+
+    id = None
+    username = "system"
+    real_name = "系统"
+    is_superuser = True
+    all_shops = True
+    token_version = 0
+
+
+def system_ctx(db: Session, tenant_id: int) -> Ctx:
+    db.info["tenant_id"] = tenant_id
+    db.info["user_id"] = None
+    return Ctx(db=db, user=_SystemUser(), tenant_id=tenant_id, permissions=ALL_PERMISSION_CODES, shop_ids=None)

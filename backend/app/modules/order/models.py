@@ -77,6 +77,7 @@ class SalesOrder(TenantModel):
     buyer_note: Mapped[str | None] = mapped_column(String(500))
     remark: Mapped[str | None] = mapped_column(String(500))
     cancel_reason: Mapped[str | None] = mapped_column(String(255))
+    stock_plan: Mapped[list | None] = mapped_column(JSON, doc="审核时锁定的库存明细 [{item_id, product_id, qty}]")
 
     items: Mapped[list["SalesOrderItem"]] = relationship(
         back_populates="order", cascade="all, delete-orphan", lazy="selectin", order_by="SalesOrderItem.id"
@@ -134,6 +135,7 @@ class ReturnOrder(TenantModel):
     return_date: Mapped[date] = mapped_column(Date, index=True)
     warehouse_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("warehouses.id"), doc="退货入库仓")
     completed_at: Mapped[datetime | None] = mapped_column(UTCDateTime)
+    restock_cost: Mapped[Decimal] = mapped_column(MoneyColumn, default=0, doc="退回良品重新入库的成本（本位币），冲减销售成本")
     remark: Mapped[str | None] = mapped_column(String(500))
 
     lines: Mapped[list["ReturnOrderLine"]] = relationship(
