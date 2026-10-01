@@ -144,6 +144,10 @@ def status_counts(fulfillment: str | None = None, shop_id: int | None = None, ct
     counts = {s: c for s, c in ctx.db.execute(stmt).all()}
     hold_stmt = select(func.count()).select_from(SalesOrder).where(SalesOrder.is_on_hold.is_(True),
                                                                     SalesOrder.status.in_(service.FBM_ACTIVE))
+    if fulfillment:
+        hold_stmt = hold_stmt.where(SalesOrder.fulfillment == fulfillment)
+    if shop_id:
+        hold_stmt = hold_stmt.where(SalesOrder.shop_id == shop_id)
     if ctx.shop_ids is not None:
         hold_stmt = hold_stmt.where(SalesOrder.shop_id.in_(ctx.shop_ids))
     counts["on_hold"] = ctx.db.execute(hold_stmt).scalar_one()
