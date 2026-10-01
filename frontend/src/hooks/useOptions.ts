@@ -24,6 +24,8 @@ export const useProviderOptions = () => useOptionList('providers', '/logistics-p
 export const useCategoryOptions = () => useOptionList('categories', '/product-categories/options')
 export const useBrandOptions = () => useOptionList('brands', '/product-brands/options')
 export const useDeptOptions = () => useOptionList('depts', '/system/departments/options')
+export const useDistributorOptions = () => useOptionList('distributors', '/distribution/distributors/options')
+export const useLevelOptions = () => useOptionList('dist-levels', '/distribution/levels/options')
 
 export function useCurrencies() {
   return useQuery({

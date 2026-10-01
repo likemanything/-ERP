@@ -57,6 +57,7 @@ def order_out_many(ctx: Ctx, orders) -> list[dict]:
     dists = _names(db, Distributor, [o.distributor_id for o in orders])
     listing_ids = {i.listing_id for o in orders for i in o.items if i.listing_id}
     images = dict(db.execute(select(Listing.id, Listing.image_url).where(Listing.id.in_(listing_ids))).all()) if listing_ids else {}
+    product_images = _names(db, Product, [i.product_id for o in orders for i in o.items if not images.get(i.listing_id)], "image_url")
     show_cost = ctx.can("product:cost:view")
     out = []
     for o in orders:
@@ -68,7 +69,7 @@ def order_out_many(ctx: Ctx, orders) -> list[dict]:
         items = []
         for i in o.items:
             it = {c.key: getattr(i, c.key) for c in SalesOrderItem.__table__.columns}
-            it["image_url"] = images.get(i.listing_id)
+            it["image_url"] = images.get(i.listing_id) or product_images.get(i.product_id)
             if not show_cost:
                 it["cost_purchase"] = it["cost_freight"] = None
             items.append(it)

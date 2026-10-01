@@ -26,7 +26,12 @@ export default function Settings() {
   const qc = useQueryClient()
   const setProfile = useAuth((s) => s.setProfile)
   const { user, permissions } = useAuth()
-  const { data: items } = useQuery({ queryKey: ['settings'], queryFn: () => api.get<SettingItem[]>('/system/settings') })
+  // 分销参数在「分销设置」页单独维护
+  const { data: items } = useQuery({
+    queryKey: ['settings'],
+    queryFn: () => api.get<SettingItem[]>('/system/settings'),
+    select: (list) => list.filter((i) => !i.key.startsWith('distribution.')),
+  })
   const { data: tenant } = useQuery({ queryKey: ['tenant'], queryFn: () => api.get('/system/tenant') })
   const [form] = Form.useForm()
   const [tForm] = Form.useForm()
@@ -35,7 +40,7 @@ export default function Settings() {
 
   const saveSettings = async () => {
     try {
-      const values = form.getFieldsValue(true)
+      const values = Object.fromEntries(Object.entries(form.getFieldsValue(true)).filter(([k]) => !k.startsWith('distribution.')))
       await api.put('/system/settings', { values })
       message.success('系统参数已保存')
       qc.invalidateQueries({ queryKey: ['settings'] })

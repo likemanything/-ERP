@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { App, Button, Card, Form, Input, Select, Tabs, Typography } from 'antd'
 import { LockOutlined, UserOutlined } from '@ant-design/icons'
 import { api, errorMessage } from '@/api/client'
@@ -21,8 +21,12 @@ export default function Login() {
     setTokens(t.access_token, t.refresh_token)
     const me = await api.get<{ user: CurrentUser; tenant: Tenant; permissions: string[] }>('/auth/me')
     setProfile(me.user, me.tenant, me.permissions)
+    if (me.user.user_type === 'distributor') {
+      navigate('/portal', { replace: true })
+      return
+    }
     const from = (location.state as { from?: string } | null)?.from
-    navigate(from && from !== '/login' ? from : '/', { replace: true })
+    navigate(from && from !== '/login' && !from.startsWith('/portal') ? from : '/', { replace: true })
   }
 
   const onLogin = async (v: { username: string; password: string }) => {
@@ -86,6 +90,8 @@ export default function Login() {
                     </Button>
                     <Typography.Paragraph type="secondary" style={{ marginTop: 12, fontSize: 12, textAlign: 'center' }}>
                       演示账号：demo / demo123456（需先执行 seed-demo）
+                      <br />
+                      分销商请从 <Link to="/portal/login">分销商门户</Link> 登录（演示：dealer / dealer123456）
                     </Typography.Paragraph>
                   </Form>
                 ),

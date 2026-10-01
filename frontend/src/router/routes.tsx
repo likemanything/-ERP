@@ -1,6 +1,7 @@
 import { lazy, type ComponentType, type LazyExoticComponent, type ReactNode } from 'react'
 import {
   AccountBookOutlined,
+  ApartmentOutlined,
   AppstoreOutlined,
   BarChartOutlined,
   CarOutlined,
@@ -46,6 +47,17 @@ export const MENU: MenuGroup[] = [
       { path: '/orders/fbm', label: '自发货处理', perm: 'order:view', element: p(() => import('@/pages/order/FbmOrders')) },
       { path: '/returns', label: '退货退款', perm: 'return:view', element: p(() => import('@/pages/order/Returns')) },
       { path: '/listings', label: 'Listing 管理', perm: 'listing:view', element: p(() => import('@/pages/product/Listings')) },
+    ],
+  },
+  {
+    key: 'distribution', label: '分销', icon: <ApartmentOutlined />,
+    children: [
+      { path: '/distribution/distributors', label: '分销商管理', perm: 'distribution:view', element: p(() => import('@/pages/distribution/Distributors')) },
+      { path: '/distribution/orders', label: '分销订单', perm: 'distribution:view', element: p(() => import('@/pages/distribution/DistributionOrders')) },
+      { path: '/distribution/catalog', label: '分销商品与价格', perm: 'distribution:view', element: p(() => import('@/pages/distribution/Catalog')) },
+      { path: '/distribution/recharges', label: '充值审核', perm: 'distribution:view', element: p(() => import('@/pages/distribution/Recharges')) },
+      { path: '/distribution/funds', label: '资金流水与对账', perm: 'distribution:view', element: p(() => import('@/pages/distribution/Funds')) },
+      { path: '/distribution/settings', label: '分销设置', perm: 'distribution:view', element: p(() => import('@/pages/distribution/DistributionSettings')) },
     ],
   },
   {

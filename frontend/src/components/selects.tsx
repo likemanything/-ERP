@@ -8,6 +8,8 @@ import {
   useChannelOptions,
   useCurrencies,
   useDeptOptions,
+  useDistributorOptions,
+  useLevelOptions,
   useProviderOptions,
   useRoleOptions,
   useShopOptions,
@@ -90,6 +92,16 @@ export function CategorySelect(props: BaseProps) {
 export function BrandSelect(props: BaseProps) {
   const { data, isLoading } = useBrandOptions()
   return <OptionSelect placeholder="选择品牌" options={data} loading={isLoading} {...props} />
+}
+
+export function DistributorSelect(props: BaseProps) {
+  const { data, isLoading } = useDistributorOptions()
+  return <OptionSelect placeholder="选择分销商" options={data} loading={isLoading} {...props} />
+}
+
+export function LevelSelect(props: BaseProps) {
+  const { data, isLoading } = useLevelOptions()
+  return <OptionSelect placeholder="选择等级" options={data} loading={isLoading} {...props} />
 }
 
 export function CurrencySelect(props: BaseProps) {

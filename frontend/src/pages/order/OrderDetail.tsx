@@ -4,7 +4,7 @@ import { api } from '@/api/client'
 import StatusTag from '@/components/StatusTag'
 import ProductCell from '@/components/ProductCell'
 import { useBaseCurrency } from '@/store/auth'
-import { FULFILLMENT, ORDER_STATUS, PLATFORM } from '@/utils/dicts'
+import { DISTRIBUTION_TYPE, FULFILLMENT, ORDER_STATUS, PLATFORM } from '@/utils/dicts'
 import { fmtDate, fmtDateTime, fmtMoney, profitColor } from '@/utils/format'
 
 type Order = Record<string, any>
@@ -53,6 +53,20 @@ export default function OrderDetail({ orderId, onClose }: { orderId: number | nu
             <Descriptions.Item label="备注">{o.remark ?? '-'}</Descriptions.Item>
             {o.buyer_note && <Descriptions.Item label="买家留言" span={3}>{o.buyer_note}</Descriptions.Item>}
             {o.cancel_reason && <Descriptions.Item label="取消原因" span={3}>{o.cancel_reason}</Descriptions.Item>}
+            {o.distributor_id && (
+              <Descriptions.Item label="分销扣款" span={3}>
+                <Space wrap>
+                  <Tag color="purple">{o.distributor_name}</Tag>
+                  <StatusTag dict={DISTRIBUTION_TYPE} value={o.distribution_type} />
+                  <span>货款 {fmtMoney(o.charge_detail?.goods ?? 0, o.currency)}</span>
+                  <span>运费 {fmtMoney(o.charge_detail?.freight ?? 0, o.currency)}</span>
+                  <span>操作费 {fmtMoney(o.charge_detail?.handling ?? 0, o.currency)}</span>
+                  {!!Number(o.charge_detail?.adjust ?? 0) && <span>调整 {fmtMoney(o.charge_detail.adjust, o.currency)}</span>}
+                  <strong>合计 {fmtMoney(o.charge_detail?.total ?? 0, o.currency)}</strong>
+                  {!!Number(o.charge_detail?.refunded ?? 0) && <Typography.Text type="danger">已退 {fmtMoney(o.charge_detail.refunded, o.currency)}</Typography.Text>}
+                </Space>
+              </Descriptions.Item>
+            )}
           </Descriptions>
           <Table<Record<string, any>>
             size="small"

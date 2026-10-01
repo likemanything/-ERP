@@ -105,7 +105,7 @@ export default function DataTable<T extends object>(props: Props<T>) {
   const ctx: ToolbarCtx<T> = { selectedRowKeys: selected.keys, selectedRows: selected.rows, reload, params, clearSelection }
 
   const filterForm = filters.length > 0 && (
-    <Form form={form} layout="inline" initialValues={initialValues} onFinish={onSearch} style={{ rowGap: 8, marginBottom: 12 }}>
+    <Form form={form} name={`filter-${queryKey}`} layout="inline" initialValues={initialValues} onFinish={onSearch} style={{ rowGap: 8, marginBottom: 12 }}>
       {filters.map((f) => (
         <Form.Item key={f.name} name={f.name} label={f.label} style={{ marginBottom: 0 }}>
           {f.type === 'select' ? (

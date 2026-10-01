@@ -87,7 +87,7 @@ def test_order_lifecycle_with_funds(api, factory, client):
 
     # 取消 → 释放库存并退款
     o = portal.post(f"/portal/orders/{o['id']}/cancel")
-    assert o["status"] == "cancelled"
+    assert o["status"] == "cancelled" and o["charge_detail"]["refunded"] == 23.4
     assert portal.get("/portal/me")["distributor"]["balance"] == 100
     assert factory.inventory(wh["id"], a["id"])["qty_locked"] == 0
 
@@ -112,10 +112,19 @@ def test_order_lifecycle_with_funds(api, factory, client):
     api.post(f"/returns/{ret['id']}/complete", {"warehouse_id": wh["id"]})
     bal = portal.get("/portal/me")["distributor"]["balance"]
     assert bal == round(100 - 23.4 - 2 + 9, 2)
+    assert portal.get(f"/portal/orders/{o2['id']}")["charge_detail"]["refunded"] == 9
+
+    # 退款不超过订单剩余扣款
+    ret2 = api.post("/returns", {"order_id": o2["id"], "lines": [{"order_item_id": staff_view["items"][0]["id"], "qty": 1,
+                                                               "refund_amount": 100, "qty_good": 1}]})
+    api.post(f"/returns/{ret2['id']}/complete", {"warehouse_id": wh["id"]})
+    bal = portal.get("/portal/me")["distributor"]["balance"]
+    assert bal == round(100 - 23.4 - 2 + 9 + (25.4 - 9), 2)
+    assert portal.get(f"/portal/orders/{o2['id']}")["charge_detail"]["refunded"] == 25.4
 
     # 流水与对账单
     txns = portal.get("/portal/transactions")["items"]
-    assert [t["txn_type"] for t in txns][:3] == ["refund", "order", "order"]
+    assert [t["txn_type"] for t in txns][:4] == ["refund", "refund", "order", "order"]
     st = portal.get(f"/portal/statement?date_from={date.today()}&date_to={date.today()}")
     assert st["opening_balance"] == 0 and st["closing_balance"] == bal and st["recharge"] == 100
 

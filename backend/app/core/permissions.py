@@ -193,7 +193,14 @@ PRESET_ROLES: dict[str, tuple[str, list[str]]] = {
             "dashboard:view", "finance:profit:view", "finance:transaction:view", "finance:transaction:edit",
             "finance:expense:view", "finance:expense:edit", "finance:rate:view", "finance:rate:edit",
             "finance:valuation:view", "purchase:payment:view", "purchase:payment:approve", "product:cost:view",
-            "report:view", "ads:view",
+            "report:view", "ads:view", "distribution:view", "distribution:finance",
+        ],
+    ),
+    "distribution": (
+        "分销专员",
+        [
+            "dashboard:view", "product:view", "inventory:view", "order:view", "order:audit", "order:cancel",
+            "logistics:view", "distribution:view", "distribution:edit", "distribution:account",
         ],
     ),
 }

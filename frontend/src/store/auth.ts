@@ -17,6 +17,9 @@ export interface CurrentUser {
   all_shops: boolean
   roles: RoleBrief[]
   shop_ids: number[]
+  /** staff：企业员工；distributor：分销商门户账号 */
+  user_type?: 'staff' | 'distributor'
+  distributor_id?: number | null
 }
 
 export interface Tenant {

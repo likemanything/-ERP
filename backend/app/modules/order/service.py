@@ -631,5 +631,12 @@ def estimate_profit(db, order: SalesOrder) -> Decimal | None:
         base = to_base(db, revenue, order.currency, order.local_date)
     except BizError:
         return None
-    cost = sum((i.cost_purchase + i.cost_freight) for i in order.items)
-    return q2(base - cost - Decimal(order.actual_freight or 0))
+    cost = Decimal(0)
+    for i in order.items:
+        if i.cost_settled or i.cost_purchase or not i.product_id:
+            cost += i.cost_purchase + i.cost_freight
+        else:  # 未发货尚未核算 FIFO 成本：按参考采购成本预估
+            p = db.get(Product, i.product_id)
+            cost += Decimal(p.purchase_cost or 0) * i.quantity if p else Decimal(0)
+    freight = Decimal(order.actual_freight or 0) or Decimal(order.est_freight or 0)
+    return q2(base - cost - freight)

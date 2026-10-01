@@ -500,7 +500,7 @@ def place_order(ctx: Ctx, d: Distributor, data: dict) -> SalesOrder:
         ship_address2=addr.get("address2"), ship_postcode=addr.get("postcode"), buyer_note=data.get("remark"),
         distributor_id=d.id, distribution_type=order_type, logistics_channel_id=q["channel_id"],
         charge_detail={"goods": float(q["goods"]), "freight": float(q["freight"]), "handling": float(q["handling"]),
-                       "adjust": 0.0, "total": float(q["total"]), "currency": d.currency, "refunded": False},
+                       "adjust": 0.0, "total": float(q["total"]), "currency": d.currency, "refunded": 0.0},
     )
     for idx, ln in enumerate(q["_lines"]):
         order.items.append(SalesOrderItem(
@@ -533,24 +533,38 @@ def place_order(ctx: Ctx, d: Distributor, data: dict) -> SalesOrder:
     return order
 
 
+def _refundable(detail: dict) -> Decimal:
+    refunded = detail.get("refunded")
+    refunded = Decimal(0) if isinstance(refunded, bool) or refunded is None else Decimal(str(refunded))
+    return max(Decimal(str(detail.get("total") or 0)) - refunded, Decimal(0))
+
+
 def refund_order(db, order: SalesOrder, remark: str) -> None:
-    """订单取消：全额退回已扣款（幂等）。"""
+    """订单取消：退回尚未退还的扣款（幂等）。charge_detail.refunded 为累计退款金额。"""
     detail = dict(order.charge_detail or {})
-    if not order.distributor_id or detail.get("refunded"):
+    if not order.distributor_id or detail.get("cancel_refunded"):
         return
-    total = Decimal(str(detail.get("total") or 0))
-    if total:
-        post_txn(db, order.distributor_id, total, "refund", ref_type="sales_order", ref_id=order.id,
+    amount = q2(_refundable(detail))
+    if amount:
+        post_txn(db, order.distributor_id, amount, "refund", ref_type="sales_order", ref_id=order.id,
                  ref_no=order.platform_order_id, remark=remark)
-    detail["refunded"] = True
+    detail["refunded"] = float(Decimal(str(detail.get("total") or 0)))
+    detail["cancel_refunded"] = True
     order.charge_detail = detail
 
 
 def credit_return(db, order: SalesOrder, ret) -> None:
-    """退货退款完成：按退款金额退回分销商账户。"""
-    if order.distributor_id and Decimal(ret.refund_amount or 0) > 0:
-        post_txn(db, order.distributor_id, Decimal(ret.refund_amount), "refund", ref_type="return_order",
-                 ref_id=ret.id, ref_no=ret.return_no, remark=f"退货退款（订单 {order.platform_order_id}）")
+    """退货退款完成：按退款金额退回分销商账户（不超过订单尚未退还的扣款）。"""
+    if not order.distributor_id:
+        return
+    detail = dict(order.charge_detail or {})
+    amount = q2(min(Decimal(ret.refund_amount or 0), _refundable(detail)))
+    if amount <= 0:
+        return
+    post_txn(db, order.distributor_id, amount, "refund", ref_type="return_order",
+             ref_id=ret.id, ref_no=ret.return_no, remark=f"退货退款（订单 {order.platform_order_id}）")
+    detail["refunded"] = float(Decimal(str(detail.get("total") or 0)) - _refundable(detail) + amount)
+    order.charge_detail = detail
 
 
 def charge_adjust(ctx: Ctx, order_id: int, amount: Decimal, remark: str) -> SalesOrder:

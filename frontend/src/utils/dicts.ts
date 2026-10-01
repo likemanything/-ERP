@@ -194,6 +194,7 @@ export const PLATFORM: Dict = {
   shein: ['SHEIN', 'default'],
   aliexpress: ['速卖通', 'red'],
   manual: ['线下', 'default'],
+  distribution: ['分销', 'purple'],
 }
 
 export const FULFILLMENT: Dict = {
@@ -215,4 +216,33 @@ export function dictOptions(d: Dict) {
 export function dictLabel(d: Dict, v?: string | null): string {
   if (!v) return '-'
   return d[v]?.[0] ?? v
+}
+
+export const DISTRIBUTION_TYPE: Dict = {
+  dropship: ['一件代发', 'blue'],
+  wholesale: ['批发', 'purple'],
+}
+
+export const DISTRIBUTOR_STATUS: Dict = {
+  active: ['正常', 'green'],
+  disabled: ['停用', 'default'],
+}
+
+export const TXN_TYPE: Dict = {
+  recharge: ['充值', 'green'],
+  order: ['订单扣款', 'blue'],
+  refund: ['退款', 'cyan'],
+  adjust: ['调整', 'orange'],
+}
+
+export const RECHARGE_STATUS: Dict = {
+  pending: ['待确认', 'orange'],
+  approved: ['已到账', 'green'],
+  rejected: ['已驳回', 'red'],
+}
+
+export const STOCK_DISPLAY: Dict = {
+  real: ['显示真实库存', 'blue'],
+  capped: ['显示上限', 'purple'],
+  status: ['仅显示有货/缺货', 'default'],
 }
