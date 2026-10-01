@@ -52,7 +52,12 @@ def _api_router() -> APIRouter:
     return api
 
 
+DEFAULT_SECRET = "change-me-in-production-please-use-a-long-random-string"
+
+
 def create_app() -> FastAPI:
+    if settings.env == "prod" and (settings.secret_key == DEFAULT_SECRET or len(settings.secret_key) < 32):
+        raise RuntimeError("生产环境必须设置 ERP_SECRET_KEY（至少 32 位随机字符串）")
     application = FastAPI(
         title=settings.app_name,
         version="0.1.0",
@@ -81,7 +86,13 @@ def create_app() -> FastAPI:
 
         @application.get("/{full_path:path}", include_in_schema=False)
         def spa(full_path: str):
-            target = dist / full_path
+            if full_path.startswith("api/"):
+                from fastapi import HTTPException
+
+                raise HTTPException(status_code=404, detail="Not Found")
+            target = (dist / full_path).resolve()
+            if not str(target).startswith(str(dist.resolve())):
+                return FileResponse(dist / "index.html")
             if full_path and target.is_file():
                 return FileResponse(target)
             return FileResponse(dist / "index.html")

@@ -365,13 +365,13 @@ def settle_fbm_cost(ctx: Ctx, order: SalesOrder) -> None:
 def resettle_unpaired(ctx: Ctx, shop_id: int | None = None) -> int:
     """配对后对已发货但未核算成本的订单重新核算（FBA 从 FBA 仓结转，自发货从发货仓补扣）。"""
     db = ctx.db
-    stmt = (
-        select(SalesOrder)
-        .join(SalesOrderItem, SalesOrderItem.order_id == SalesOrder.id)
-        .where(SalesOrder.status.in_([OrderStatus.SHIPPED, OrderStatus.DELIVERED]),
-               SalesOrderItem.cost_settled.is_(False), SalesOrderItem.product_id.is_not(None))
-        .distinct()
+    # 注意：不能对含 JSON 列的实体使用 DISTINCT（PostgreSQL 的 json 类型没有等值运算符），改用 IN 子查询
+    pending = select(SalesOrderItem.order_id).where(
+        SalesOrderItem.cost_settled.is_(False), SalesOrderItem.product_id.is_not(None)
     )
+    stmt = select(SalesOrder).where(
+        SalesOrder.status.in_([OrderStatus.SHIPPED, OrderStatus.DELIVERED]), SalesOrder.id.in_(pending)
+    ).order_by(SalesOrder.id)
     if shop_id:
         stmt = stmt.where(SalesOrder.shop_id == shop_id)
     if ctx.shop_ids is not None:

@@ -1,0 +1,46 @@
+# 一键部署：docker compose up -d   →  http://localhost:8000
+# 首次体验可设置 ERP_SEED_DEMO=true 生成演示企业（demo / demo123456）
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: erp
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-erp_password_change_me}
+      POSTGRES_DB: erp
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U erp"]
+      interval: 5s
+      retries: 20
+
+  web:
+    build: .
+    image: cloudsail-erp:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment: &env
+      ERP_DATABASE_URL: postgresql+psycopg://erp:${DB_PASSWORD:-erp_password_change_me}@db:5432/erp
+      ERP_SECRET_KEY: ${ERP_SECRET_KEY:?请在 .env 中设置 ERP_SECRET_KEY（至少32位随机字符串）}
+      ERP_ENCRYPTION_KEY: ${ERP_ENCRYPTION_KEY:-}
+      ERP_ALLOW_REGISTRATION: ${ERP_ALLOW_REGISTRATION:-true}
+      ERP_SEED_DEMO: ${ERP_SEED_DEMO:-false}
+      ERP_CORS_ORIGINS: '["http://localhost:8000"]'
+      WEB_CONCURRENCY: ${WEB_CONCURRENCY:-2}
+    ports:
+      - "${ERP_PORT:-8000}:8000"
+    command: ["web"]
+
+  worker:
+    image: cloudsail-erp:latest
+    restart: unless-stopped
+    depends_on:
+      - web
+    environment: *env
+    command: ["worker"]
+
+volumes:
+  pgdata:
