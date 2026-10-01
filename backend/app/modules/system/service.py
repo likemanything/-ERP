@@ -132,7 +132,7 @@ def bootstrap_tenant(
         month = date.today().strftime("%Y-%m")
         for cur, rate in DEFAULT_RATES_TO_CNY.items():
             db.add(ExchangeRate(currency=cur, month=month, rate=Decimal(rate), remark="系统默认参考汇率"))
-    db.add(ReplenishmentRule(listing_id=None))
+    db.add(ReplenishmentRule.make_default())
     db.commit()
     return tenant, admin
 
