@@ -14,6 +14,10 @@ import { fmtDateTime } from '@/utils/format'
 
 type Shop = Record<string, any>
 
+const CAPABILITY_LABEL: Record<string, string> = {
+  orders: '订单', listings: 'Listing', fba_inventory: '平台仓库存', finances: '结算明细', ads: '广告数据',
+}
+
 interface PlatformCap {
   platform: string
   capabilities: string[]
@@ -75,6 +79,10 @@ function ShopForm({ editing }: { editing: Shop | null }) {
       </Form.Item>
       {!demo && cap && (
         <>
+          <div style={{ margin: '-8px 0 12px', color: '#888', fontSize: 12 }}>
+            支持同步：{Object.keys(CAPABILITY_LABEL).filter((c) => cap.capabilities.includes(c)).map((c) => CAPABILITY_LABEL[c]).join('、')}
+            {cap.capabilities.includes('ads') && cap.platform === 'amazon' && '（广告数据需填写广告 Refresh Token）'}
+          </div>
           {editing?.has_credentials && (
             <Alert type="info" showIcon style={{ marginBottom: 12 }} title={`已保存授权字段：${editing.credential_keys.join(', ')}。留空表示不修改。`} />
           )}

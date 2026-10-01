@@ -19,7 +19,9 @@ from collections.abc import Iterator
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
+from app.integrations.amazon_ads import AmazonAdsClient
 from app.integrations.base import (
+    ADS,
     FBA_INVENTORY,
     FINANCES,
     LISTINGS,
@@ -68,11 +70,15 @@ def _money(obj: dict | None) -> Decimal:
 
 class AmazonConnector(PlatformConnector):
     platform = "amazon"
-    capabilities = frozenset({ORDERS, LISTINGS, FBA_INVENTORY, FINANCES})
+    capabilities = frozenset({ORDERS, LISTINGS, FBA_INVENTORY, FINANCES, ADS})
     credential_fields = [
         ("client_id", "LWA Client ID", False),
         ("client_secret", "LWA Client Secret", True),
         ("refresh_token", "Refresh Token（卖家授权）", True),
+        ("ads_refresh_token", "广告 Refresh Token（可选，开通广告数据同步）", True),
+        ("ads_client_id", "广告应用 Client ID（可选，默认同上）", False),
+        ("ads_client_secret", "广告应用 Client Secret（可选）", True),
+        ("ads_profile_id", "广告 Profile ID（可选，默认按站点自动匹配）", False),
     ]
     #: getOrderItems 速率约 0.5 次/秒，两次调用间隔（秒）
     item_call_interval = 2.0
@@ -88,6 +94,15 @@ class AmazonConnector(PlatformConnector):
         self.endpoint = self.credentials.get("endpoint") or ENDPOINTS.get(mp.region, ENDPOINTS["NA"])
         self._token: str | None = None
         self._token_expire = 0.0
+        self.ads = AmazonAdsClient(self, mp)
+
+    def supports(self, job_type: str) -> bool:
+        if job_type == ADS:
+            return self.ads.configured
+        return super().supports(job_type)
+
+    def fetch_ad_metrics(self, start, end):
+        return self.ads.fetch_metrics(start, end)
 
     # ------------------------------------------------------------ 认证
     def _access_token(self) -> str:

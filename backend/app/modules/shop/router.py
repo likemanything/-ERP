@@ -43,19 +43,24 @@ def _apply_marketplace(shop: Shop, code: str | None) -> None:
         shop.timezone = shop.timezone or mp.timezone
 
 
+#: 支持平台仓发货的平台 → 虚拟仓名称前缀（Amazon FBA / Walmart WFS / TikTok FBT）
+PLATFORM_WAREHOUSES = {Platform.AMAZON: "FBA", Platform.WALMART: "WFS", Platform.TIKTOK: "FBT"}
+
+
 def ensure_fba_warehouse(ctx: Ctx, shop: Shop):
-    """亚马逊店铺自动创建对应的 FBA 虚拟仓。"""
+    """平台仓发货的店铺自动创建对应的平台虚拟仓（warehouse_type=fba），平台仓订单从这里结转成本。"""
     from app.modules.warehouse.models import Warehouse
 
-    if shop.platform != Platform.AMAZON:
+    label = PLATFORM_WAREHOUSES.get(shop.platform)
+    if label is None:
         return None
     wh = ctx.db.execute(
         select(Warehouse).where(Warehouse.shop_id == shop.id, Warehouse.warehouse_type == "fba")
     ).scalar_one_or_none()
     if wh is None:
         wh = Warehouse(
-            code=f"FBA-{shop.id}",
-            name=f"FBA仓-{shop.name}",
+            code=f"{label}-{shop.id}",
+            name=f"{label}仓-{shop.name}",
             warehouse_type="fba",
             country=shop.country,
             shop_id=shop.id,

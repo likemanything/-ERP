@@ -5,10 +5,14 @@ from app.integrations.amazon import AmazonConnector
 from app.integrations.base import ConnectorError, PlatformConnector
 from app.integrations.demo import DemoConnector
 from app.integrations.shopify import ShopifyConnector
+from app.integrations.tiktok import TikTokConnector
+from app.integrations.walmart import WalmartConnector
 
 CONNECTORS: dict[str, type[PlatformConnector]] = {
     "amazon": AmazonConnector,
     "shopify": ShopifyConnector,
+    "walmart": WalmartConnector,
+    "tiktok": TikTokConnector,
 }
 
 
