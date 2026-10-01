@@ -56,6 +56,7 @@ for code, platform, country, name, cur, region, tz in [
     ("ALIEXPRESS_GLOBAL", "aliexpress", "GLOBAL", "速卖通", "USD", "GLOBAL", "Asia/Shanghai"),
     ("SHOPIFY_GLOBAL", "shopify", "GLOBAL", "Shopify 独立站", "USD", "GLOBAL", "UTC"),
     ("MANUAL_GLOBAL", "manual", "GLOBAL", "线下/其他渠道", "CNY", "GLOBAL", "Asia/Shanghai"),
+    ("DISTRIBUTION_GLOBAL", "distribution", "GLOBAL", "分销渠道", "CNY", "GLOBAL", "Asia/Shanghai"),
 ]:
     MARKETPLACES[code] = Marketplace(code, platform, country, name, cur, region, tz)
 

@@ -15,6 +15,8 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name
 
 def _api_router() -> APIRouter:
     from app.modules.ads.router import router as ads_router
+    from app.modules.distribution.portal import router as portal_router
+    from app.modules.distribution.router import router as distribution_router
     from app.modules.fba.router import router as fba_router
     from app.modules.finance.router import router as finance_router
     from app.modules.integration.router import router as integration_router
@@ -47,6 +49,8 @@ def _api_router() -> APIRouter:
         ads_router,
         report_router,
         integration_router,
+        distribution_router,
+        portal_router,
     ):
         api.include_router(r)
     return api

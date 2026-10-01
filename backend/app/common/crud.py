@@ -22,7 +22,8 @@ from app.core.errors import Conflict, NotFound
 def get_or_404(db: Session, model: type, obj_id: int, label: str | None = None, *, for_update: bool = False):
     stmt = select(model).where(model.id == obj_id)
     if for_update:
-        stmt = stmt.with_for_update()
+        # FOR UPDATE OF 主表：避免与 joined 预加载的外连接冲突（PostgreSQL 不允许锁外连接的可空侧）
+        stmt = stmt.with_for_update(of=model)
     obj = db.execute(stmt).scalar_one_or_none()
     if obj is None:
         raise NotFound(f"{label or getattr(model, '__label__', model.__name__)}不存在（ID={obj_id}）")

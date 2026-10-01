@@ -82,6 +82,10 @@ class OrderOut(ORMOut):
     buyer_note: str | None = None
     remark: str | None = None
     cancel_reason: str | None = None
+    distributor_id: int | None = None
+    distributor_name: str | None = None
+    distribution_type: str | None = None
+    charge_detail: dict | None = None
     has_unpaired: bool = False
     est_profit: Money | None = None
     items: list[OrderItemOut] = []

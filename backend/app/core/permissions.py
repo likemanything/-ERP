@@ -123,6 +123,15 @@ PERMISSION_GROUPS: tuple[PermGroup, ...] = (
         ("finance:valuation:view", "查看库存估值"),
     ),
     _g(
+        "distribution",
+        "分销管理",
+        ("distribution:view", "查看分销商/分销商品/分销订单"),
+        ("distribution:edit", "维护分销商、等级、分销商品与价格"),
+        ("distribution:account", "开通/管理分销商登录账号"),
+        ("distribution:finance", "分销资金：充值审核、余额调整、对账"),
+        ("distribution:setting", "分销参数设置"),
+    ),
+    _g(
         "ads",
         "广告管理",
         ("ads:view", "查看广告数据"),

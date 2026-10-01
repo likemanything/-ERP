@@ -152,6 +152,8 @@ def user_to_out(db: Session, user: User) -> dict:
         "is_active": user.is_active,
         "is_superuser": user.is_superuser,
         "all_shops": user.all_shops,
+        "user_type": user.user_type or "staff",
+        "distributor_id": user.distributor_id,
         "last_login_at": user.last_login_at,
         "roles": [{"id": r.id, "code": r.code, "name": r.name} for r in user.roles],
         "shop_ids": list(shop_ids),

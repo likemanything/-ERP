@@ -76,7 +76,7 @@ class InventoryService:
             InventoryBalance.warehouse_id == warehouse_id, InventoryBalance.product_id == product_id
         )
         if lock:
-            stmt = stmt.with_for_update()
+            stmt = stmt.with_for_update(of=InventoryBalance)
         bal = self.db.execute(stmt).scalar_one_or_none()
         if bal is None:
             try:
@@ -263,7 +263,7 @@ class InventoryService:
                 InventoryBatch.qty_remaining > 0,
             )
             .order_by(InventoryBatch.received_at, InventoryBatch.id)
-            .with_for_update()
+            .with_for_update(of=InventoryBatch)
         ).scalars().all()
         on_hand = bal.qty_on_hand
         for batch in batches:

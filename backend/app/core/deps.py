@@ -85,7 +85,9 @@ def _load_ctx(request: Request, db: Session, token: str | None) -> Ctx:
     if tenant is None or not tenant.is_active:
         raise Unauthorized("企业账号已停用")
 
-    if user.is_superuser:
+    if getattr(user, "user_type", "staff") != "staff":
+        perms = frozenset()  # 分销商账号不具备任何后台权限
+    elif user.is_superuser:
         perms = ALL_PERMISSION_CODES
     else:
         codes: set[str] = set()
@@ -94,15 +96,26 @@ def _load_ctx(request: Request, db: Session, token: str | None) -> Ctx:
         perms = frozenset(codes & ALL_PERMISSION_CODES)
 
     shop_ids = None
-    if not user.is_superuser and not user.all_shops:
+    if getattr(user, "user_type", "staff") != "staff":
+        shop_ids = frozenset()
+    elif not user.is_superuser and not user.all_shops:
         shop_ids = frozenset(db.execute(select(UserShop.shop_id).where(UserShop.user_id == user.id)).scalars().all())
 
     ip = request.client.host if request.client else None
     return Ctx(db=db, user=user, tenant_id=user.tenant_id, permissions=perms, shop_ids=shop_ids, ip=ip)
 
 
-def get_ctx(request: Request, db: Session = Depends(get_db), token: str | None = Depends(oauth2_scheme)) -> Ctx:
+def get_any_ctx(request: Request, db: Session = Depends(get_db), token: str | None = Depends(oauth2_scheme)) -> Ctx:
+    """任意已登录账号（员工或分销商），仅用于 /auth/me、修改密码等通用接口。"""
     return _load_ctx(request, db, token)
+
+
+def get_ctx(request: Request, db: Session = Depends(get_db), token: str | None = Depends(oauth2_scheme)) -> Ctx:
+    """管理后台接口：仅允许员工账号，分销商账号一律拒绝。"""
+    ctx = _load_ctx(request, db, token)
+    if getattr(ctx.user, "user_type", "staff") != "staff":
+        raise Forbidden("分销商账号无权访问管理后台，请使用分销商门户")
+    return ctx
 
 
 def perm(*codes: str) -> Callable[..., Ctx]:
@@ -135,6 +148,7 @@ class _SystemUser:
     is_superuser = True
     all_shops = True
     token_version = 0
+    user_type = "staff"
 
 
 def system_ctx(db: Session, tenant_id: int) -> Ctx:

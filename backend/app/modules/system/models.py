@@ -71,6 +71,12 @@ class User(TenantModel):
     dept_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("departments.id"))
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_superuser: Mapped[bool] = mapped_column(Boolean, default=False, doc="企业管理员，拥有全部权限")
+    user_type: Mapped[str] = mapped_column(
+        String(16), default="staff", server_default="staff", index=True, doc="staff 员工 / distributor 分销商"
+    )
+    distributor_id: Mapped[int | None] = mapped_column(
+        BigInteger, ForeignKey("distributors.id", ondelete="CASCADE"), index=True, doc="分销商账号所属分销商"
+    )
     all_shops: Mapped[bool] = mapped_column(Boolean, default=True, doc="是否可访问全部店铺数据")
     token_version: Mapped[int] = mapped_column(Integer, default=0, doc="修改密码/禁用后使旧 token 失效")
     last_login_at: Mapped[datetime | None] = mapped_column(UTCDateTime)

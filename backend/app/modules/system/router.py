@@ -10,7 +10,7 @@ from app.common.pagination import PageParams, page_params, paginate
 from app.common.schemas import Msg, Option, Page
 from app.core.config import settings
 from app.core.db import get_db
-from app.core.deps import Ctx, get_ctx, perm
+from app.core.deps import Ctx, get_any_ctx, get_ctx, perm
 from app.core.errors import Conflict, Forbidden
 from app.core.permissions import permission_tree
 from app.modules.shop.marketplaces import CURRENCIES
@@ -75,7 +75,7 @@ def register(body: RegisterIn, db: Session = Depends(get_db)):
 
 
 @auth_router.get("/me", response_model=MeOut, summary="当前用户信息")
-def me(ctx: Ctx = Depends(get_ctx)):
+def me(ctx: Ctx = Depends(get_any_ctx)):
     tenant = ctx.db.get(Tenant, ctx.tenant_id)
     return {
         "user": service.user_to_out(ctx.db, ctx.user),
@@ -85,7 +85,7 @@ def me(ctx: Ctx = Depends(get_ctx)):
 
 
 @auth_router.post("/change-password", response_model=Msg, summary="修改密码")
-def change_password(body: ChangePasswordIn, ctx: Ctx = Depends(get_ctx)):
+def change_password(body: ChangePasswordIn, ctx: Ctx = Depends(get_any_ctx)):
     service.change_password(ctx, body.old_password, body.new_password)
     return Msg(message="密码已修改，请重新登录")
 
@@ -117,7 +117,7 @@ def list_users(
     params: PageParams = Depends(page_params),
     ctx: Ctx = Depends(perm("system:user")),
 ):
-    stmt = select(User).order_by(User.id)
+    stmt = select(User).where(User.user_type == "staff").order_by(User.id)
     stmt = keyword_filter(stmt, keyword, [User.username, User.real_name, User.phone, User.email])
     if is_active is not None:
         stmt = stmt.where(User.is_active == is_active)
@@ -130,7 +130,9 @@ def list_users(
 
 @router.get("/users/options", response_model=list[Option], summary="用户下拉")
 def user_options(ctx: Ctx = Depends(get_ctx)):
-    users = ctx.db.execute(select(User).where(User.is_active.is_(True)).order_by(User.id)).scalars().all()
+    users = ctx.db.execute(
+        select(User).where(User.is_active.is_(True), User.user_type == "staff").order_by(User.id)
+    ).scalars().all()
     return [Option(value=u.id, label=u.real_name or u.username) for u in users]
 
 

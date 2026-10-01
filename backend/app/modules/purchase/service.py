@@ -84,7 +84,7 @@ def create_plan(ctx: Ctx, data: dict) -> PurchasePlan:
 def plans_to_orders(ctx: Ctx, plan_ids: list[int], warehouse_id: int | None) -> list[PurchaseOrder]:
     """采购计划按「供应商 + 收货仓」合并生成采购单。"""
     plans = ctx.db.execute(
-        select(PurchasePlan).where(PurchasePlan.id.in_(plan_ids)).with_for_update()
+        select(PurchasePlan).where(PurchasePlan.id.in_(plan_ids)).with_for_update(of=PurchasePlan)
     ).scalars().all()
     if len(plans) != len(set(plan_ids)):
         raise BizError("部分采购计划不存在")
@@ -446,7 +446,7 @@ def create_payment_request(ctx: Ctx, data: dict) -> PaymentRequest:
     po_ids = [ln["purchase_order_id"] for ln in lines]
     if len(set(po_ids)) != len(po_ids):
         raise BizError("同一采购单不能重复请款")
-    pos = {p.id: p for p in db.execute(select(PurchaseOrder).where(PurchaseOrder.id.in_(po_ids)).with_for_update()).scalars().all()}
+    pos = {p.id: p for p in db.execute(select(PurchaseOrder).where(PurchaseOrder.id.in_(po_ids)).with_for_update(of=PurchaseOrder)).scalars().all()}
     currency = None
     req = PaymentRequest(request_no=next_doc_no(db, "PAY"), status=PaymentRequestStatus.PENDING, **data)
     total = Decimal(0)

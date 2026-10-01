@@ -52,6 +52,9 @@ def order_out_many(ctx: Ctx, orders) -> list[dict]:
     shops = _names(db, Shop, [o.shop_id for o in orders])
     whs = _names(db, Warehouse, [o.warehouse_id for o in orders])
     chs = _names(db, LogisticsChannel, [o.logistics_channel_id for o in orders])
+    from app.modules.distribution.models import Distributor
+
+    dists = _names(db, Distributor, [o.distributor_id for o in orders])
     listing_ids = {i.listing_id for o in orders for i in o.items if i.listing_id}
     images = dict(db.execute(select(Listing.id, Listing.image_url).where(Listing.id.in_(listing_ids))).all()) if listing_ids else {}
     show_cost = ctx.can("product:cost:view")
@@ -59,7 +62,7 @@ def order_out_many(ctx: Ctx, orders) -> list[dict]:
     for o in orders:
         d = {c.key: getattr(o, c.key) for c in SalesOrder.__table__.columns}
         d.update(shop_name=shops.get(o.shop_id), warehouse_name=whs.get(o.warehouse_id),
-                 logistics_channel_name=chs.get(o.logistics_channel_id))
+                 logistics_channel_name=chs.get(o.logistics_channel_id), distributor_name=dists.get(o.distributor_id))
         d["has_unpaired"] = any(i.product_id is None for i in o.items)
         d["est_profit"] = service.estimate_profit(db, o) if show_cost else None
         items = []
@@ -75,7 +78,8 @@ def order_out_many(ctx: Ctx, orders) -> list[dict]:
 
 
 def _order_query(ctx: Ctx, *, keyword=None, shop_id=None, status=None, fulfillment=None, date_from=None,
-                 date_to=None, on_hold=None, unpaired=None, country=None, warehouse_id=None):
+                 date_to=None, on_hold=None, unpaired=None, country=None, warehouse_id=None, distributor_id=None,
+                 distribution_only=None):
     stmt = select(SalesOrder).order_by(SalesOrder.purchase_at.desc(), SalesOrder.id.desc())
     if keyword:
         kw = f"%{keyword.strip()}%"
@@ -104,6 +108,10 @@ def _order_query(ctx: Ctx, *, keyword=None, shop_id=None, status=None, fulfillme
         stmt = stmt.where(SalesOrder.ship_country == country)
     if warehouse_id:
         stmt = stmt.where(SalesOrder.warehouse_id == warehouse_id)
+    if distributor_id:
+        stmt = stmt.where(SalesOrder.distributor_id == distributor_id)
+    if distribution_only is not None:
+        stmt = stmt.where(SalesOrder.distributor_id.is_not(None) if distribution_only else SalesOrder.distributor_id.is_(None))
     if ctx.shop_ids is not None:
         stmt = stmt.where(SalesOrder.shop_id.in_(ctx.shop_ids))
     return stmt
@@ -121,20 +129,25 @@ def list_orders(
     unpaired: bool | None = None,
     country: str | None = None,
     warehouse_id: int | None = None,
+    distributor_id: int | None = None,
+    distribution_only: bool | None = None,
     params: PageParams = Depends(page_params),
     ctx: Ctx = Depends(perm("order:view")),
 ):
     stmt = _order_query(ctx, keyword=keyword, shop_id=shop_id, status=status, fulfillment=fulfillment,
                         date_from=date_from, date_to=date_to, on_hold=on_hold, unpaired=unpaired, country=country,
-                        warehouse_id=warehouse_id)
+                        warehouse_id=warehouse_id, distributor_id=distributor_id, distribution_only=distribution_only)
     page = paginate(ctx.db, stmt, params)
     page["items"] = order_out_many(ctx, page["items"])
     return page
 
 
 @router.get("/orders/status-counts", summary="订单状态统计（页签角标）")
-def status_counts(fulfillment: str | None = None, shop_id: int | None = None, ctx: Ctx = Depends(perm("order:view"))):
+def status_counts(fulfillment: str | None = None, shop_id: int | None = None, distribution_only: bool | None = None,
+                  ctx: Ctx = Depends(perm("order:view"))):
     stmt = select(SalesOrder.status, func.count()).group_by(SalesOrder.status)
+    if distribution_only is not None:
+        stmt = stmt.where(SalesOrder.distributor_id.is_not(None) if distribution_only else SalesOrder.distributor_id.is_(None))
     if fulfillment:
         stmt = stmt.where(SalesOrder.fulfillment == fulfillment)
     if shop_id:

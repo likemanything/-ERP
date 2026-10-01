@@ -21,6 +21,14 @@ SETTING_DEFS: tuple[SettingDef, ...] = (
     SettingDef("fba.default_allocation", "weight", "头程费用默认分摊方式", "weight/volume/quantity/value"),
     SettingDef("inventory.low_stock_days", 15, "库存预警天数", "可售天数低于该值时首页预警"),
     SettingDef("finance.fee_estimate_commission_rate", 0.15, "预估佣金比例", "平台未结算前用于预估佣金"),
+    # ---- 分销
+    SettingDef("distribution.warehouse_ids", [], "分销发货仓", "分销商品可售库存与发货的仓库 ID 列表，为空表示全部本地/海外仓"),
+    SettingDef("distribution.channel_ids", [], "分销可选物流渠道", "分销商下单可选的物流渠道 ID 列表，为空表示全部尾程渠道"),
+    SettingDef("distribution.handling_fee_per_order", 0, "代发操作费（每单，本位币）", "一件代发订单按单收取"),
+    SettingDef("distribution.handling_fee_per_item", 0, "代发操作费（每件，本位币）", "一件代发订单按件收取"),
+    SettingDef("distribution.freight_markup_rate", 0, "运费加价比例", "如 0.1 表示在渠道运费基础上加收 10%"),
+    SettingDef("distribution.auto_audit", True, "分销订单自动审核", "分销商下单后自动分配仓库并锁定库存"),
+    SettingDef("distribution.allow_cancel_after_audit", True, "允许分销商取消已审核订单", "未发货前分销商可自行取消并退款"),
 )
 
 SETTING_MAP: dict[str, SettingDef] = {d.key: d for d in SETTING_DEFS}

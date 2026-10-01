@@ -13,6 +13,7 @@ class Platform(StrEnum):
     SHEIN = "shein"
     ALIEXPRESS = "aliexpress"
     MANUAL = "manual"  # 手工/线下店铺
+    DISTRIBUTION = "distribution"  # 分销渠道（每个分销商一个虚拟店铺）
 
 
 class ShopStatus(StrEnum):

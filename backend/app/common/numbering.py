@@ -16,7 +16,7 @@ def next_doc_no(db: Session, prefix: str, *, day: date | None = None, width: int
     period = day.strftime("%y%m%d")
     for _ in range(5):
         seq = db.execute(
-            select(Sequence).where(Sequence.prefix == prefix, Sequence.period == period).with_for_update()
+            select(Sequence).where(Sequence.prefix == prefix, Sequence.period == period).with_for_update(of=Sequence)
         ).scalar_one_or_none()
         if seq is None:
             try:

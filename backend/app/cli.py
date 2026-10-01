@@ -16,6 +16,7 @@ from sqlalchemy import select
 
 import app.models  # noqa: F401
 from app.core.db import SessionLocal
+from app.core.types import q2
 
 log = logging.getLogger("erp.cli")
 
@@ -172,7 +173,43 @@ def seed_demo(username: str = "demo", password: str = "demo123456") -> None:
                                  "expense_date": date.today() - timedelta(days=5 + i * 7), "amount": Decimal(amount),
                                  "currency": "CNY", "description": desc})
         db.commit()
-        print(f"演示数据已生成：登录账号 {username} / {password}")
+
+        # 分销：等级、分销商（含门户账号）、分销商品、充值与订单
+        from app.modules.distribution import service as dist
+        from app.modules.distribution.models import DistributorLevel
+        from app.modules.system.service import update_settings
+
+        lv_normal = DistributorLevel(code="STD", name="标准分销", discount_rate=Decimal("1"))
+        lv_vip = DistributorLevel(code="VIP", name="VIP 分销", discount_rate=Decimal("0.92"))
+        db.add_all([lv_normal, lv_vip])
+        db.flush()
+        update_settings(ctx, {"distribution.channel_ids": [exp.id], "distribution.handling_fee_per_order": 7.1,
+                              "distribution.freight_markup_rate": 0.1})
+        dist.upsert_catalog(ctx, [
+            {"product_id": p.id, "base_price": q2(Decimal(costs[code]) / Decimal("7.1") * Decimal("1.6")), "currency": "USD",
+             "min_qty": 20, "title": p.name}
+            for code, p in products.items()
+        ])
+        dealer = dist.create_distributor(ctx, {
+            "name": "Sunrise Trading LLC", "contact": "Mike Chen", "email": "mike@example.com", "country": "US",
+            "address": "500 Commerce Blvd, Ontario, CA 91761", "currency": "USD", "level_id": lv_vip.id,
+            "credit_limit": Decimal("500"), "username": "dealer", "password": "dealer123456",
+        })
+        dist.create_distributor(ctx, {"name": "深圳跨境优选", "contact": "王总", "currency": "CNY", "level_id": lv_normal.id})
+        req = dist.create_recharge(db, dealer, {"amount": Decimal("2000"), "payment_method": "电汇", "transaction_no": "TT20260901"})
+        dist.review_recharge(ctx, req.id, True)
+        dealer = db.get(type(dealer), dealer.id)
+        for i, (code, qty) in enumerate([("LAMP-01", 2), ("BOTTLE-03", 3), ("CASE-07", 5)]):
+            dist.place_order(ctx, dealer, {
+                "order_type": "dropship", "channel_id": exp.id, "reference_no": f"SUN-{1001 + i}",
+                "items": [{"product_id": products[code].id, "qty": qty}],
+                "address": {"name": ["Emily Davis", "Jason Lee", "Karen White"][i], "country": "US", "state": "CA",
+                            "city": "San Jose", "address1": f"{100 + i} Market St", "postcode": "95113"},
+            })
+            db.commit()
+        dist.create_recharge(db, dealer, {"amount": Decimal("1500"), "payment_method": "PayPal", "transaction_no": "PP-88231"})
+        db.commit()
+        print(f"演示数据已生成：登录账号 {username} / {password}；分销商门户账号 dealer / dealer123456")
 
 
 def main(argv: list[str] | None = None) -> None:

@@ -78,6 +78,9 @@ class SalesOrder(TenantModel):
     remark: Mapped[str | None] = mapped_column(String(500))
     cancel_reason: Mapped[str | None] = mapped_column(String(255))
     stock_plan: Mapped[list | None] = mapped_column(JSON, doc="审核时锁定的库存明细 [{item_id, product_id, qty}]")
+    distributor_id: Mapped[int | None] = mapped_column(BigInteger, ForeignKey("distributors.id"), index=True, doc="分销订单所属分销商")
+    distribution_type: Mapped[str | None] = mapped_column(String(16), doc="dropship 一件代发 / wholesale 批发")
+    charge_detail: Mapped[dict | None] = mapped_column(JSON, doc="分销扣费明细 {goods, freight, handling, adjust, total, currency}")
 
     items: Mapped[list["SalesOrderItem"]] = relationship(
         back_populates="order", cascade="all, delete-orphan", lazy="selectin", order_by="SalesOrderItem.id"

@@ -63,6 +63,8 @@ class UserOut(ORMOut):
     is_active: bool
     is_superuser: bool
     all_shops: bool
+    user_type: str = "staff"
+    distributor_id: int | None = None
     last_login_at: datetime | None = None
     roles: list[RoleBrief] = []
     shop_ids: list[int] = []

@@ -392,6 +392,10 @@ def _do_cancel(ctx: Ctx, order: SalesOrder, reason: str | None) -> None:
         _release_lock(ctx, order)
     order.status = OrderStatus.CANCELLED
     order.cancel_reason = reason
+    if order.distributor_id:
+        from app.modules.distribution.service import refund_order
+
+        refund_order(ctx.db, order, f"订单取消退款：{reason or ''}".strip("："))
 
 
 def _release_lock(ctx: Ctx, order: SalesOrder) -> None:
@@ -404,7 +408,7 @@ def _release_lock(ctx: Ctx, order: SalesOrder) -> None:
 
 # ================================================================ 对外操作
 def _load_orders(ctx: Ctx, ids: list[int]) -> list[SalesOrder]:
-    orders = ctx.db.execute(select(SalesOrder).where(SalesOrder.id.in_(ids)).with_for_update()).scalars().all()
+    orders = ctx.db.execute(select(SalesOrder).where(SalesOrder.id.in_(ids)).with_for_update(of=SalesOrder)).scalars().all()
     for o in orders:
         ctx.require_shop(o.shop_id)
     return orders
@@ -595,6 +599,12 @@ def complete_return(ctx: Ctx, ret_id: int, warehouse_id: int | None, lines: list
     ret.restock_cost = q2(restock_cost)
     ret.status = ReturnStatus.COMPLETED
     ret.completed_at = utcnow()
+    if ret.order_id:
+        src = db.get(SalesOrder, ret.order_id)
+        if src is not None and src.distributor_id:
+            from app.modules.distribution.service import credit_return
+
+            credit_return(db, src, ret)
     audit(ctx, "complete", "return_order", ret.id, f"完成退货 {ret.return_no}")
     db.commit()
     return ret

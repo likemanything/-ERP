@@ -1,6 +1,7 @@
 """导入全部 ORM 模型，确保 Base.metadata 完整（供 Alembic 与建表使用）。"""
 
 from app.modules.ads import models as ads_models  # noqa: F401
+from app.modules.distribution import models as distribution_models  # noqa: F401
 from app.modules.fba import models as fba_models  # noqa: F401
 from app.modules.finance import models as finance_models  # noqa: F401
 from app.modules.integration import models as integration_models  # noqa: F401

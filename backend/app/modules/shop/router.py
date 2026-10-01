@@ -18,6 +18,7 @@ router = APIRouter(prefix="/shops", tags=["店铺授权"])
 PLATFORM_NAMES = {
     "amazon": "亚马逊 Amazon", "shopify": "Shopify", "walmart": "沃尔玛 Walmart", "ebay": "eBay",
     "tiktok": "TikTok Shop", "temu": "Temu", "shein": "SHEIN", "aliexpress": "速卖通", "manual": "线下/手工",
+    "distribution": "分销渠道",
 }
 
 
