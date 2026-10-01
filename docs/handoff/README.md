@@ -7,7 +7,7 @@
 
 | 日期 | 任务 | 记录 | 状态 |
 | --- | --- | --- | --- |
-| 2026-10-01 | T15 平台连接器（Walmart / TikTok / Amazon Ads） | [2026-10-01-platform-connectors.md](2026-10-01-platform-connectors.md) | 已暂停 |
+| 2026-10-01 | T15 平台连接器（Walmart / TikTok / Amazon Ads） | [2026-10-01-platform-connectors.md](2026-10-01-platform-connectors.md) | 已被重新认领（进行中） |
 
 ## 已关闭
 

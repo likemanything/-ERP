@@ -25,7 +25,7 @@
 
 | ID | 标题 | 优先级 | 状态 | 负责人 | 分支 | 更新 | 备注 |
 | --- | --- | --- | --- | --- | --- | --- | --- |
-| T15 | 平台连接器：Walmart / TikTok Shop / Amazon Ads | P1 | 已暂停 | （空，可认领） | `claude/wizardly-meitner-h2vsdz`（未提交） | 2026-10-01 | [交接记录](../handoff/2026-10-01-platform-connectors.md) |
+| T15 | 平台连接器：Walmart / TikTok Shop / Amazon Ads | P1 | 进行中 | claude（会话 016P7Q） | `claude/wizardly-meitner-h2vsdz` | 2026-10-01 | 按[交接记录](../handoff/2026-10-01-platform-connectors.md)继续 |
 | T18 | 分销增强：子账号权限、专属价格、发货通知、月结对账 | P1 | 待认领 | | | | |
 | T19 | 物流商面单对接（取号 + 打印面单） | P1 | 待认领 | | | | 依赖 T19a 选型 |
 | T20 | Amazon Send-to-Amazon 货件创建与官方箱唛 | P2 | 待认领 | | | | |
